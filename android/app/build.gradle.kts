@@ -17,7 +17,8 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
-    }
+    }git checkout your-branch-name
+
 
     defaultConfig {
         applicationId = "com.example.mobile_project"
