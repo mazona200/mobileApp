@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'signup_page.dart'; // 👇 We'll create this
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
+
+import 'signup_page.dart';
+import 'gov_home_page.dart';
+import 'utils/string_extensions.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String role;
+
+  const LoginPage({super.key, required this.role});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -13,42 +20,198 @@ class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final auth = FirebaseAuth.instance;
+  final _formKey = GlobalKey<FormState>();
 
-  void login() async {
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
+  final LocalAuthentication biometricAuth = LocalAuthentication();
+
+  bool isLoading = false;
+  bool rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+    _triggerBiometricLogin();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final savedEmail = await secureStorage.read(key: 'saved_email');
+    final savedPassword = await secureStorage.read(key: 'saved_password');
+    final savedRemember = await secureStorage.read(key: 'remember_me') == 'true';
+
+    if (savedRemember) {
+      setState(() {
+        emailController.text = savedEmail ?? '';
+        passwordController.text = savedPassword ?? '';
+        rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _triggerBiometricLogin() async {
+    final remember = await secureStorage.read(key: 'remember_me');
+    if (remember != 'true') return;
+
+    final canCheck = await biometricAuth.canCheckBiometrics;
+    final isSupported = await biometricAuth.isDeviceSupported();
+
+    if (!canCheck || !isSupported) {
+      print('[DEBUG] Biometric not supported');
+      return;
+    }
+
+    final authenticated = await biometricAuth.authenticate(
+      localizedReason: 'Authenticate to log in',
+      options: const AuthenticationOptions(biometricOnly: true),
+    );
+
+    print('[DEBUG] Biometric authenticated=$authenticated');
+
+    if (authenticated) {
+      login(auto: true);
+    }
+  }
+
+  Future<void> login({bool auto = false}) async {
+    if (!auto && !_formKey.currentState!.validate()) return;
+
+    setState(() => isLoading = true);
+
     try {
       await auth.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      if (rememberMe) {
+        await secureStorage.write(key: 'saved_email', value: emailController.text.trim());
+        await secureStorage.write(key: 'saved_password', value: passwordController.text.trim());
+        await secureStorage.write(key: 'remember_me', value: 'true');
+      } else {
+        await secureStorage.delete(key: 'saved_email');
+        await secureStorage.delete(key: 'saved_password');
+        await secureStorage.write(key: 'remember_me', value: 'false');
+      }
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login Successful!')),
+        SnackBar(content: Text('Login Successful as ${widget.role}!')),
       );
+
+      if (widget.role.toLowerCase() == 'government') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const GovernmentHomePage()),
+        );
+      } else {
+        // TODO: Handle other roles
+      }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login Failed: $e')),
       );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Login")),
+      appBar: AppBar(title: Text("Login as ${widget.role.capitalize()}")),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(controller: emailController, decoration: const InputDecoration(labelText: "Email")),
-            TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Password")),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: login, child: const Text("Login")),
-            TextButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupPage()));
-              },
-              child: const Text("Don't have an account? Sign up"),
-            ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: "Email"),
+              ),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: "Password"),
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: rememberMe,
+                    onChanged: (value) {
+                      setState(() {
+                        rememberMe = value ?? false;
+                      });
+                    },
+                  ),
+                  const Text("Remember Me"),
+                ],
+              ),
+              const SizedBox(height: 20),
+              isLoading
+                  ? const CircularProgressIndicator()
+                  : Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: login,
+                          child: const Text("Login"),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            print('[DEBUG] Biometric button pressed');
+                            final canCheck = await biometricAuth.canCheckBiometrics;
+                            final isSupported = await biometricAuth.isDeviceSupported();
+                            print('[DEBUG] canCheck=$canCheck, isSupported=$isSupported');
+
+                            if (!canCheck || !isSupported) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Biometrics not supported on this device."),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final authenticated = await biometricAuth.authenticate(
+                              localizedReason: 'Authenticate using fingerprint or face ID',
+                              options: const AuthenticationOptions(biometricOnly: true),
+                            );
+
+                            print('[DEBUG] authenticated=$authenticated');
+
+                            if (authenticated) {
+                              login(auto: true);
+                            } else {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Biometric login failed or was canceled.")),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.fingerprint),
+                          label: const Text("Use Biometric Login"),
+                        ),
+                      ],
+                    ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SignupPage(role: widget.role),
+                    ),
+                  );
+                },
+                child: const Text("Don't have an account? Sign up"),
+              ),
+            ],
+          ),
         ),
       ),
     );
