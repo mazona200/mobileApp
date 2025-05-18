@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'utils/string_extensions.dart'; // ✅ Shared extension
+import 'utils/string_extensions.dart';
 
 class SignupPage extends StatefulWidget {
   final String role;

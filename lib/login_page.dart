@@ -56,17 +56,12 @@ class _LoginPageState extends State<LoginPage> {
     final canCheck = await biometricAuth.canCheckBiometrics;
     final isSupported = await biometricAuth.isDeviceSupported();
 
-    if (!canCheck || !isSupported) {
-      print('[DEBUG] Biometric not supported');
-      return;
-    }
+    if (!canCheck || !isSupported) return;
 
     final authenticated = await biometricAuth.authenticate(
       localizedReason: 'Authenticate to log in',
       options: const AuthenticationOptions(biometricOnly: true),
     );
-
-    print('[DEBUG] Biometric authenticated=$authenticated');
 
     if (authenticated) {
       login(auto: true);
@@ -95,7 +90,6 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login Successful as ${widget.role}!')),
       );
@@ -106,8 +100,9 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (_) => const GovernmentHomePage()),
         );
       } else {
-        // TODO: Handle other roles
+        // TODO: Navigate to other role home pages
       }
+
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -163,17 +158,13 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 10),
                         ElevatedButton.icon(
                           onPressed: () async {
-                            print('[DEBUG] Biometric button pressed');
                             final canCheck = await biometricAuth.canCheckBiometrics;
                             final isSupported = await biometricAuth.isDeviceSupported();
-                            print('[DEBUG] canCheck=$canCheck, isSupported=$isSupported');
 
                             if (!canCheck || !isSupported) {
                               if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Biometrics not supported on this device."),
-                                ),
+                                const SnackBar(content: Text("Biometrics not supported on this device.")),
                               );
                               return;
                             }
@@ -182,8 +173,6 @@ class _LoginPageState extends State<LoginPage> {
                               localizedReason: 'Authenticate using fingerprint or face ID',
                               options: const AuthenticationOptions(biometricOnly: true),
                             );
-
-                            print('[DEBUG] authenticated=$authenticated');
 
                             if (authenticated) {
                               login(auto: true);
