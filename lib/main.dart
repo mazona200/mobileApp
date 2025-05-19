@@ -4,6 +4,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'common/role_selection_page.dart';
 import 'services/push_notifications.dart'; // ✅ Modular FCM service
 import 'services/theme_provider.dart'; // Import our new theme provider
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/register_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -114,6 +116,12 @@ class _MyAppState extends State<MyApp> {
                 return MaterialPageRoute(builder: (_) => const RoleSelectionPage());
               }
               return null;
+            },
+            initialRoute: '/login',
+            routes: {
+              '/login': (context) => const LoginScreen(),
+              '/register': (context) => const RegisterScreen(),
+              // Add other routes here as we create them
             },
           );
         },
