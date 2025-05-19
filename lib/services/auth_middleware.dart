@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'user_service.dart';
-import '../login_page.dart';
+import '../common/login_page.dart';
 
 class AuthMiddleware {
   // Checks if user is authenticated and has the correct role

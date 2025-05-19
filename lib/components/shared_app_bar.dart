@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/user_service.dart';
 import '../services/theme_service.dart';
 import '../services/theme_provider.dart';
-import '../role_selection_page.dart';
+import '../common/role_selection_page.dart';
 import '../citizen/citizen_home_page.dart';
 import '../government/gov_home_page.dart';
 import '../advertiser/advertiser_home_page.dart';

@@ -37,6 +37,11 @@ class _PollResultsPageState extends State<PollResultsPage> {
           
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
+        final votesMap = Map<String, dynamic>.from(data['votes'] ?? {});
+        
+        // Convert votes to proper integer values
+        data['votes'] = votesMap.map((key, value) => MapEntry(key, (value ?? 0) as int));
+        
         setState(() {
           pollData = data;
           isLoading = false;
@@ -136,117 +141,154 @@ class _PollResultsPageState extends State<PollResultsPage> {
       ),
       body: isLoading 
         ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+        : _buildContent(themeColor),
+    );
+  }
+  
+  Widget _buildContent(Color themeColor) {
+    // Check if there are any votes
+    if (totalVotes == 0) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.how_to_vote_outlined, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                "No votes yet",
+                style: TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.question,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Question
+            Text(
+              widget.question, 
+              style: const TextStyle(
+                fontSize: 22, 
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            
+            const SizedBox(height: 8),
+            
+            // Poll info
+            Row(
+              children: [
+                Icon(Icons.how_to_vote, size: 16, color: themeColor),
+                const SizedBox(width: 4),
+                Text(
+                  '$totalVotes vote${totalVotes != 1 ? 's' : ''}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: themeColor,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    _getRemainingTime(pollData['expiryDate']),
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+            
+            const Divider(height: 32),
+            
+            // Results header
+            Row(
+              children: [
+                Icon(Icons.bar_chart, color: themeColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Results',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: themeColor,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Results bars
+            ..._buildResultBars(),
+            
+            const SizedBox(height: 24),
+            
+            // Poll details
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Question
-                  Text(
-                    widget.question, 
-                    style: const TextStyle(
-                      fontSize: 22, 
+                  const Text(
+                    'Poll Information',
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
-                  
                   const SizedBox(height: 8),
-                  
-                  // Poll info
-                  Row(
-                    children: [
-                      Icon(Icons.how_to_vote, size: 16, color: themeColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$totalVotes vote${totalVotes != 1 ? 's' : ''}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: themeColor,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          _getRemainingTime(pollData['expiryDate']),
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                    ],
+                  _buildInfoRow(
+                    'Created:', 
+                    _formatTimestamp(pollData['createdAt']),
+                    Icons.calendar_today,
                   ),
-                  
-                  const Divider(height: 32),
-                  
-                  // Results header
-                  Row(
-                    children: [
-                      Icon(Icons.bar_chart, color: themeColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Results',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: themeColor,
-                        ),
-                      ),
-                    ],
+                  _buildInfoRow(
+                    'Expires:', 
+                    _formatTimestamp(pollData['expiryDate']),
+                    Icons.timer,
                   ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Results bars
-                  ..._buildResultBars(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Poll details
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Poll Information',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildInfoRow(
-                          'Created:', 
-                          _formatTimestamp(pollData['createdAt']),
-                          Icons.calendar_today,
-                        ),
-                        _buildInfoRow(
-                          'Expires:', 
-                          _formatTimestamp(pollData['expiryDate']),
-                          Icons.timer,
-                        ),
-                        _buildInfoRow(
-                          'Status:',
-                          _getPollStatus(pollData['expiryDate']),
-                          _getPollStatus(pollData['expiryDate']) == 'Active' 
-                            ? Icons.check_circle 
-                            : Icons.cancel,
-                          _getPollStatus(pollData['expiryDate']) == 'Active'
-                            ? Colors.green
-                            : Colors.red,
-                        ),
-                      ],
-                    ),
+                  _buildInfoRow(
+                    'Status:',
+                    _getPollStatus(pollData['expiryDate']),
+                    _getPollStatus(pollData['expiryDate']) == 'Active' 
+                      ? Icons.check_circle 
+                      : Icons.cancel,
+                    _getPollStatus(pollData['expiryDate']) == 'Active'
+                      ? Colors.green
+                      : Colors.red,
                   ),
                 ],
               ),
             ),
-          ),
+          ],
+        ),
+      ),
     );
   }
   
