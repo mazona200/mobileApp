@@ -3,6 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'role_selection_page.dart';
 import 'services/push_notifications.dart'; // ✅ Modular FCM service
+import 'services/theme_service.dart';
+import 'services/theme_provider.dart'; // Import our new theme provider
+import 'services/user_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -38,10 +41,19 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'Gov App',
-      debugShowCheckedModeBanner: false,
-      home: RoleSelectionPage(),
+    // Wrap the app with our DynamicThemeProvider
+    return DynamicThemeProvider(
+      child: Builder(
+        builder: (context) {
+          return MaterialApp(
+            title: 'Gov App',
+            debugShowCheckedModeBanner: false,
+            // Use the theme from our ThemeProvider
+            theme: context.theme,
+            home: const RoleSelectionPage(),
+          );
+        },
+      ),
     );
   }
 }
