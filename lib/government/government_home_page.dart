@@ -1,41 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../components/role_protected_page.dart';
-import '../components/shared_app_bar.dart';
 
-class AdvertiserHomePage extends StatelessWidget {
-  const AdvertiserHomePage({Key? key}) : super(key: key);
-
-  void _showNotifications(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Notifications"),
-        content: const Text("You have no new notifications."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _handleMenuSelection(BuildContext context, String value) {
-    if (value == 'settings') {
-      // TODO: Navigate to SettingsPage()
-    } else if (value == 'logout') {
-      FirebaseAuth.instance.signOut();
-      Navigator.popUntil(context, (route) => route.isFirst);
-    }
-  }
+class GovernmentHomePage extends StatelessWidget {
+  const GovernmentHomePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Advertiser Dashboard'),
+        title: const Text('Government Dashboard'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -51,9 +23,9 @@ class AdvertiserHomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Campaign Stats Section
+            // Quick Stats Section
             const Text(
-              'Campaign Performance',
+              'Quick Stats',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -68,36 +40,36 @@ class AdvertiserHomePage extends StatelessWidget {
               crossAxisSpacing: 10,
               children: [
                 _buildStatCard(
-                  'Active Campaigns',
-                  '3',
-                  Icons.campaign,
-                  Colors.blue,
-                ),
-                _buildStatCard(
-                  'Total Views',
-                  '1.2K',
-                  Icons.visibility,
-                  Colors.green,
-                ),
-                _buildStatCard(
-                  'Engagement Rate',
-                  '4.5%',
-                  Icons.trending_up,
+                  'Active Issues',
+                  '12',
+                  Icons.warning,
                   Colors.orange,
                 ),
                 _buildStatCard(
-                  'Budget Used',
-                  '65%',
-                  Icons.account_balance_wallet,
+                  'Pending Requests',
+                  '5',
+                  Icons.pending_actions,
+                  Colors.blue,
+                ),
+                _buildStatCard(
+                  'Active Polls',
+                  '3',
+                  Icons.poll,
+                  Colors.green,
+                ),
+                _buildStatCard(
+                  'Announcements',
+                  '8',
+                  Icons.announcement,
                   Colors.purple,
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // Active Campaigns Section
+            // Recent Issues Section
             const Text(
-              'Active Campaigns',
+              'Recent Issues',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -106,20 +78,20 @@ class AdvertiserHomePage extends StatelessWidget {
             const SizedBox(height: 10),
             Card(
               child: ListTile(
-                leading: const Icon(Icons.campaign, color: Colors.blue),
-                title: const Text('Summer Promotion'),
-                subtitle: const Text('Ends in 5 days'),
-                trailing: const Text('1.2K views'),
+                leading: const Icon(Icons.warning, color: Colors.orange),
+                title: const Text('Road Maintenance Required'),
+                subtitle: const Text('Main Street needs repair'),
+                trailing: const Text('2 days ago'),
                 onTap: () {
-                  // TODO: Navigate to campaign details
+                  // TODO: Navigate to issue details
                 },
               ),
             ),
             const SizedBox(height: 20),
 
-            // Campaign Management Section
+            // Management Tools Section
             const Text(
-              'Campaign Management',
+              'Management Tools',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -135,34 +107,34 @@ class AdvertiserHomePage extends StatelessWidget {
               children: [
                 _buildToolCard(
                   context,
-                  'Create Campaign',
-                  Icons.add_circle,
+                  'Create Announcement',
+                  Icons.announcement,
                   () {
-                    // TODO: Navigate to create campaign
+                    // TODO: Navigate to create announcement
                   },
                 ),
                 _buildToolCard(
                   context,
-                  'Analytics',
-                  Icons.analytics,
+                  'Manage Polls',
+                  Icons.poll,
                   () {
-                    // TODO: Navigate to analytics
+                    // TODO: Navigate to manage polls
                   },
                 ),
                 _buildToolCard(
                   context,
-                  'Budget',
-                  Icons.account_balance_wallet,
+                  'Issue Management',
+                  Icons.assignment,
                   () {
-                    // TODO: Navigate to budget management
+                    // TODO: Navigate to issue management
                   },
                 ),
                 _buildToolCard(
                   context,
-                  'Targeting',
+                  'User Management',
                   Icons.people,
                   () {
-                    // TODO: Navigate to targeting settings
+                    // TODO: Navigate to user management
                   },
                 ),
               ],
