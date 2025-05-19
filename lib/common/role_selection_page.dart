@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'signup_page.dart';
-import 'services/theme_service.dart';
-import 'services/user_service.dart';
-import 'government/gov_home_page.dart';
-import 'citizen/citizen_home_page.dart';
-import 'advertiser/advertiser_home_page.dart';
+import '../services/theme_service.dart';
+import '../services/user_service.dart';
+import '../government/gov_home_page.dart';
+import '../citizen/citizen_home_page.dart';
+import '../advertiser/advertiser_home_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RoleSelectionPage extends StatefulWidget {
   const RoleSelectionPage({super.key});
@@ -133,11 +134,29 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
         password: passwordControllers[role]!.text.trim(),
       );
       
-      // Check if user role matches the requested role
-      final String? storedRole = await UserService.getUserRole(userCredential.user!.uid);
+      // Check if user exists in Firestore
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
       
-      if (storedRole != role) {
-        throw Exception('You are registered as a $storedRole, not as a $role');
+      if (!docSnapshot.exists) {
+        // Create a minimal user record if it doesn't exist
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'email': emailControllers[role]!.text.trim(),
+              'role': role,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+      } else {
+        // Check if user role matches the requested role
+        final String? storedRole = docSnapshot.data()?['role'];
+        
+        if (storedRole != role) {
+          throw Exception('You are registered as a $storedRole, not as a $role');
+        }
       }
       
       // Save login state for this role

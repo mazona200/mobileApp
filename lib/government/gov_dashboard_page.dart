@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'gov_reports_page.dart';
 import '../components/shared_app_bar.dart';
 import '../components/role_protected_page.dart';
+import '../services/user_service.dart';
+import '../common/role_selection_page.dart';
 
 class GovDashboardPage extends StatelessWidget {
   const GovDashboardPage({super.key});
@@ -23,12 +25,42 @@ class GovDashboardPage extends StatelessWidget {
     );
   }
 
-  void _handleMenuSelection(BuildContext context, String value) {
+  Future<void> _handleMenuSelection(BuildContext context, String value) async {
     if (value == 'settings') {
       // TODO: Navigate to SettingsPage()
     } else if (value == 'logout') {
-      FirebaseAuth.instance.signOut();
-      Navigator.popUntil(context, (route) => route.isFirst);
+      // Show confirmation dialog
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirmed == true) {
+        // Proper logout that clears all login states
+        await UserService.logoutFromAllRoles();
+        
+        if (!context.mounted) return;
+        
+        // Navigate to role selection page
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const RoleSelectionPage()),
+          (route) => false,
+        );
+      }
     }
   }
 

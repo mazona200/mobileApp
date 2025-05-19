@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'utils/string_extensions.dart';
-import 'services/user_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/string_extensions.dart';
+import '../services/user_service.dart';
+import '../services/error_handler.dart';
 import 'login_page.dart';
-import 'services/theme_service.dart';
+import '../services/theme_service.dart';
 import 'package:intl/intl.dart';
 
 class SignupPage extends StatefulWidget {
@@ -30,9 +32,18 @@ class _SignupPageState extends State<SignupPage> {
   
   final List<String> genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
   
-  final auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
+  
+  // Safely get FirebaseAuth instance or null if not available
+  FirebaseAuth? get _auth {
+    try {
+      return FirebaseAuth.instance;
+    } catch (e) {
+      print('Firebase Auth not available: $e');
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -77,8 +88,24 @@ class _SignupPageState extends State<SignupPage> {
     setState(() => isLoading = true);
     
     try {
+      if (_auth == null) {
+        // Firebase not available in this environment
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Firebase services are not available. Using demo mode.')),
+        );
+        
+        // Wait briefly to simulate network request
+        await Future.delayed(const Duration(seconds: 1));
+        
+        if (!mounted) return;
+        // Navigate back to home/login for demo purposes
+        Navigator.pop(context);
+        return;
+      }
+      
       // Create the user in Firebase Authentication
-      final userCredential = await auth.createUserWithEmailAndPassword(
+      final userCredential = await _auth!.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );

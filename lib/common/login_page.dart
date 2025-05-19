@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'signup_page.dart';
-import 'government/gov_home_page.dart';
-import 'utils/string_extensions.dart';
-import 'services/user_service.dart';
-import 'services/error_handler.dart';
-import 'services/theme_service.dart';
-import 'citizen/citizen_home_page.dart';
-import 'advertiser/advertiser_home_page.dart';
+import '../government/gov_home_page.dart';
+import '../utils/string_extensions.dart';
+import '../services/user_service.dart';
+import '../services/error_handler.dart';
+import '../services/theme_service.dart';
+import '../citizen/citizen_home_page.dart';
+import '../advertiser/advertiser_home_page.dart';
 
 class LoginPage extends StatefulWidget {
   final String role;
@@ -24,14 +25,22 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
-
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
   final LocalAuthentication biometricAuth = LocalAuthentication();
 
   bool isLoading = false;
   bool rememberMe = false;
+  
+  // Safely get FirebaseAuth instance or null if not available
+  FirebaseAuth? get _auth {
+    try {
+      return FirebaseAuth.instance;
+    } catch (e) {
+      debugPrint('Firebase Auth not available: $e');
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -41,40 +50,48 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _loadSavedCredentials() async {
-    final savedEmail = await secureStorage.read(key: 'saved_email');
-    final savedPassword = await secureStorage.read(key: 'saved_password');
-    final savedRemember = await secureStorage.read(key: 'remember_me') == 'true';
+    try {
+      final savedEmail = await secureStorage.read(key: 'saved_email');
+      final savedPassword = await secureStorage.read(key: 'saved_password');
+      final savedRemember = await secureStorage.read(key: 'remember_me') == 'true';
 
-    if (savedRemember) {
-      setState(() {
-        widget.emailController.text = savedEmail ?? '';
-        widget.passwordController.text = savedPassword ?? '';
-        rememberMe = true;
-      });
+      if (savedRemember && mounted) {
+        setState(() {
+          widget.emailController.text = savedEmail ?? '';
+          widget.passwordController.text = savedPassword ?? '';
+          rememberMe = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading saved credentials: $e');
     }
   }
 
   Future<void> _triggerBiometricLogin() async {
-    final remember = await secureStorage.read(key: 'remember_me');
-    if (remember != 'true') return;
+    try {
+      final remember = await secureStorage.read(key: 'remember_me');
+      if (remember != 'true') return;
 
-    final canCheck = await biometricAuth.canCheckBiometrics;
-    final isSupported = await biometricAuth.isDeviceSupported();
+      final canCheck = await biometricAuth.canCheckBiometrics;
+      final isSupported = await biometricAuth.isDeviceSupported();
 
-    if (!canCheck || !isSupported) {
-      print('[DEBUG] Biometric not supported');
-      return;
-    }
+      if (!canCheck || !isSupported) {
+        debugPrint('Biometric not supported');
+        return;
+      }
 
-    final authenticated = await biometricAuth.authenticate(
-      localizedReason: 'Authenticate to log in',
-      options: const AuthenticationOptions(biometricOnly: true),
-    );
+      final authenticated = await biometricAuth.authenticate(
+        localizedReason: 'Authenticate to log in',
+        options: const AuthenticationOptions(biometricOnly: true),
+      );
 
-    print('[DEBUG] Biometric authenticated=$authenticated');
+      debugPrint('Biometric authenticated=$authenticated');
 
-    if (authenticated) {
-      login(auto: true);
+      if (authenticated && mounted) {
+        login(auto: true);
+      }
+    } catch (e) {
+      debugPrint('Error triggering biometric login: $e');
     }
   }
 
@@ -84,18 +101,66 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = true);
 
     try {
+      // Check if Firebase Auth is available
+      if (_auth == null) {
+        await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
+        
+        if (!mounted) return;
+        
+        // Demo mode - use predefined roles for testing
+        if (widget.emailController.text.trim() == 'admin@example.com' && 
+            widget.passwordController.text.trim() == 'password123') {
+          
+          if (rememberMe) {
+            await secureStorage.write(key: 'saved_email', value: widget.emailController.text.trim());
+            await secureStorage.write(key: 'saved_password', value: widget.passwordController.text.trim());
+            await secureStorage.write(key: 'remember_me', value: 'true');
+          }
+          
+          _navigateToRolePage(widget.role);
+          return;
+        } else {
+          throw Exception('Invalid credentials. In demo mode, use admin@example.com/password123');
+        }
+      }
+      
       // Sign in with Firebase Auth
-      final userCredential = await auth.signInWithEmailAndPassword(
+      final userCredential = await _auth!.signInWithEmailAndPassword(
         email: widget.emailController.text.trim(),
         password: widget.passwordController.text.trim(),
       );
       
-      // Check if user role matches the requested role
-      final String? storedRole = await UserService.getUserRole(userCredential.user!.uid);
+      // Check if user exists in Firestore
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
       
-      if (storedRole != widget.role) {
-        throw Exception('You are registered as a $storedRole, not as a ${widget.role}');
+      if (!docSnapshot.exists) {
+        // Create a minimal user record if it doesn't exist
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'email': widget.emailController.text.trim(),
+              'role': widget.role,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+      } else {
+        // Check if user role matches the requested role
+        final String? storedRole = docSnapshot.data()?['role'];
+        
+        if (storedRole != widget.role) {
+          throw Exception('You are registered as a $storedRole, not as a ${widget.role}');
+        }
       }
+
+      // Save login state for this role
+      await UserService.saveLoginState(
+        widget.role,
+        userCredential.user!.uid,
+        userCredential.user!.email ?? widget.emailController.text.trim()
+      );
 
       // If role matches, proceed with login
       if (rememberMe) {
@@ -114,29 +179,41 @@ class _LoginPageState extends State<LoginPage> {
         SnackBar(content: Text('Login Successful as ${widget.role}!')),
       );
 
-      // Navigate to the appropriate home page based on role
-      if (widget.role.toLowerCase() == 'government') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const GovernmentHomePage()),
-        );
-      } else if (widget.role.toLowerCase() == 'citizen') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const CitizenHomePage()),
-        );
-      } else if (widget.role.toLowerCase() == 'advertiser') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdvertiserHomePage()),
-        );
-      }
+      _navigateToRolePage(widget.role);
     } catch (e) {
       if (!mounted) return;
       ErrorHandler.showError(context, e);
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
+  }
+  
+  void _navigateToRolePage(String role) {
+    if (!mounted) return;
+    
+    Widget targetPage;
+    switch (role.toLowerCase()) {
+      case 'government':
+        targetPage = const GovernmentHomePage();
+        break;
+      case 'citizen':
+        targetPage = const CitizenHomePage();
+        break;
+      case 'advertiser':
+        targetPage = const AdvertiserHomePage();
+        break;
+      default:
+        // Default fallback
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unknown role type')),
+        );
+        return;
+    }
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => targetPage),
+    );
   }
 
   @override
