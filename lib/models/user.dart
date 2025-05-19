@@ -35,15 +35,28 @@ class User {
 
   factory User.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    print('Raw role data from Firestore: ${data['role']}');
+    
+    // More robust role conversion
+    UserRole role;
+    try {
+      String roleStr = data['role']?.toString().toLowerCase() ?? 'citizen';
+      role = UserRole.values.firstWhere(
+        (e) => e.toString().split('.').last.toLowerCase() == roleStr,
+        orElse: () => UserRole.citizen,
+      );
+      print('Converted role: $role');
+    } catch (e) {
+      print('Error converting role: $e');
+      role = UserRole.citizen;
+    }
+    
     return User(
       id: doc.id,
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       phoneNumber: data['phoneNumber'] ?? '',
-      role: UserRole.values.firstWhere(
-        (e) => e.toString() == 'UserRole.${data['role']}',
-        orElse: () => UserRole.citizen,
-      ),
+      role: role,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       lastLogin: data['lastLogin'] != null
           ? (data['lastLogin'] as Timestamp).toDate()

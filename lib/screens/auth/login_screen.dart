@@ -36,15 +36,22 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      print('Attempting login with email: ${_emailController.text.trim()}');
+      print('Selected role: $_selectedRole');
+      
       final userCredential = await _authService.signInWithEmailAndPassword(
         _emailController.text.trim(),
         _passwordController.text,
       );
+      print('Firebase auth successful, getting user data...');
 
       // Get user data to verify role
       final userData = await _authService.getUserData(userCredential.user!.uid);
+      print('User data retrieved. Role from Firestore: ${userData.role}');
+      print('Selected role: $_selectedRole');
       
       if (userData.role != _selectedRole) {
+        print('Role mismatch: Firestore role (${userData.role}) != Selected role ($_selectedRole)');
         setState(() {
           _errorMessage = 'Invalid role selected for this account';
           _isLoading = false;
@@ -67,12 +74,14 @@ class _LoginScreenState extends State<LoginScreen> {
           break;
       }
     } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Error: ${e.code} - ${e.message}');
       setState(() {
         _errorMessage = e.message ?? 'An error occurred during login';
       });
     } catch (e) {
+      print('Unexpected error during login: $e');
       setState(() {
-        _errorMessage = 'An unexpected error occurred';
+        _errorMessage = 'An unexpected error occurred: $e';
       });
     } finally {
       if (mounted) {
