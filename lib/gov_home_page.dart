@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'announcements/gov_announcements_page.dart'; // ✅ updated path
 import 'gov_dashboard_page.dart';
 import 'polls_page.dart';
+import 'create_poll_page.dart'; // <-- Import your new Create Poll page
+import 'inbox_page.dart';       // <-- Import the new Inbox page
 
 class GovernmentHomePage extends StatelessWidget {
   const GovernmentHomePage({super.key});
@@ -87,7 +89,18 @@ class GovernmentHomePage extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const PollsPage()),
               );
             }),
-            _buildButton(context, Icons.chat_bubble_outline, "Inbox", () {}),
+            _buildButton(context, Icons.add_chart_outlined, "Create Poll", () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CreatePollPage()),
+              );
+            }),
+            _buildButton(context, Icons.chat_bubble_outline, "Inbox", () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InboxPage()),
+              );
+            }),
             _buildButton(context, Icons.campaign_outlined, "Manage Ads", () {}),
           ],
         ),
