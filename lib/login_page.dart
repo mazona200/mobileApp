@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:local_auth/local_auth.dart';
 
 import 'signup_page.dart';
 import 'gov_home_page.dart';
+import 'forgot_password_page.dart';  // Import for forgot password
 import 'utils/string_extensions.dart';
 
 class LoginPage extends StatefulWidget {
@@ -23,7 +23,6 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
 
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
-  final LocalAuthentication biometricAuth = LocalAuthentication();
 
   bool isLoading = false;
   bool rememberMe = false;
@@ -32,7 +31,6 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     _loadSavedCredentials();
-    _triggerBiometricLogin();
   }
 
   Future<void> _loadSavedCredentials() async {
@@ -46,25 +44,6 @@ class _LoginPageState extends State<LoginPage> {
         passwordController.text = savedPassword ?? '';
         rememberMe = true;
       });
-    }
-  }
-
-  Future<void> _triggerBiometricLogin() async {
-    final remember = await secureStorage.read(key: 'remember_me');
-    if (remember != 'true') return;
-
-    final canCheck = await biometricAuth.canCheckBiometrics;
-    final isSupported = await biometricAuth.isDeviceSupported();
-
-    if (!canCheck || !isSupported) return;
-
-    final authenticated = await biometricAuth.authenticate(
-      localizedReason: 'Authenticate to log in',
-      options: const AuthenticationOptions(biometricOnly: true),
-    );
-
-    if (authenticated) {
-      login(auto: true);
     }
   }
 
@@ -90,6 +69,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login Successful as ${widget.role}!')),
       );
@@ -100,9 +80,8 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (_) => const GovernmentHomePage()),
         );
       } else {
-        // TODO: Navigate to other role home pages
+        // TODO: Handle other roles
       }
-
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -133,6 +112,21 @@ class _LoginPageState extends State<LoginPage> {
                 obscureText: true,
                 decoration: const InputDecoration(labelText: "Password"),
               ),
+
+              // Forgot Password button
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                    );
+                  },
+                  child: const Text("Forgot Password?"),
+                ),
+              ),
+
               Row(
                 children: [
                   Checkbox(
@@ -146,48 +140,15 @@ class _LoginPageState extends State<LoginPage> {
                   const Text("Remember Me"),
                 ],
               ),
+
               const SizedBox(height: 20),
               isLoading
                   ? const CircularProgressIndicator()
-                  : Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: login,
-                          child: const Text("Login"),
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            final canCheck = await biometricAuth.canCheckBiometrics;
-                            final isSupported = await biometricAuth.isDeviceSupported();
-
-                            if (!canCheck || !isSupported) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Biometrics not supported on this device.")),
-                              );
-                              return;
-                            }
-
-                            final authenticated = await biometricAuth.authenticate(
-                              localizedReason: 'Authenticate using fingerprint or face ID',
-                              options: const AuthenticationOptions(biometricOnly: true),
-                            );
-
-                            if (authenticated) {
-                              login(auto: true);
-                            } else {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Biometric login failed or was canceled.")),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.fingerprint),
-                          label: const Text("Use Biometric Login"),
-                        ),
-                      ],
+                  : ElevatedButton(
+                      onPressed: login,
+                      child: const Text("Login"),
                     ),
+
               TextButton(
                 onPressed: () {
                   Navigator.push(
