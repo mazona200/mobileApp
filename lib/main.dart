@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'common/role_selection_page.dart';
 import 'services/push_notifications.dart'; // ✅ Modular FCM service
 import 'services/theme_provider.dart'; // Import our new theme provider
@@ -33,6 +34,13 @@ void main() async {
   try {
     await Firebase.initializeApp();
     print('Firebase initialization successful');
+    
+    // Initialize App Check in debug mode
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.debug,
+      appleProvider: AppleProvider.debug,
+    );
+    print('Firebase App Check initialized in debug mode');
     
     // Register background FCM handler
     FirebaseMessaging.onBackgroundMessage(
