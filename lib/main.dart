@@ -7,6 +7,9 @@ import 'services/push_notifications.dart'; // ✅ Modular FCM service
 import 'services/theme_provider.dart'; // Import our new theme provider
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/citizen/home_screen.dart';
+import 'screens/government/home_screen.dart';
+import 'screens/advertiser/home_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -129,7 +132,9 @@ class _MyAppState extends State<MyApp> {
             routes: {
               '/login': (context) => const LoginScreen(),
               '/register': (context) => const RegisterScreen(),
-              // Add other routes here as we create them
+              '/citizen/home': (context) => const CitizenHomeScreen(),
+              '/government/home': (context) => const GovernmentHomeScreen(),
+              '/advertiser/home': (context) => const AdvertiserHomeScreen(),
             },
           );
         },
