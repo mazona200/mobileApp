@@ -4,21 +4,26 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
 import 'signup_page.dart';
-import 'gov_home_page.dart';
+import 'government/gov_home_page.dart';
 import 'utils/string_extensions.dart';
+import 'services/user_service.dart';
+import 'services/error_handler.dart';
+import 'services/theme_service.dart';
+import 'citizen/citizen_home_page.dart';
+import 'advertiser/advertiser_home_page.dart';
 
 class LoginPage extends StatefulWidget {
   final String role;
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
-  const LoginPage({super.key, required this.role});
+  LoginPage({super.key, required this.role});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
   final auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
 
@@ -42,8 +47,8 @@ class _LoginPageState extends State<LoginPage> {
 
     if (savedRemember) {
       setState(() {
-        emailController.text = savedEmail ?? '';
-        passwordController.text = savedPassword ?? '';
+        widget.emailController.text = savedEmail ?? '';
+        widget.passwordController.text = savedPassword ?? '';
         rememberMe = true;
       });
     }
@@ -79,14 +84,23 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = true);
 
     try {
-      await auth.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+      // Sign in with Firebase Auth
+      final userCredential = await auth.signInWithEmailAndPassword(
+        email: widget.emailController.text.trim(),
+        password: widget.passwordController.text.trim(),
       );
+      
+      // Check if user role matches the requested role
+      final String? storedRole = await UserService.getUserRole(userCredential.user!.uid);
+      
+      if (storedRole != widget.role) {
+        throw Exception('You are registered as a $storedRole, not as a ${widget.role}');
+      }
 
+      // If role matches, proceed with login
       if (rememberMe) {
-        await secureStorage.write(key: 'saved_email', value: emailController.text.trim());
-        await secureStorage.write(key: 'saved_password', value: passwordController.text.trim());
+        await secureStorage.write(key: 'saved_email', value: widget.emailController.text.trim());
+        await secureStorage.write(key: 'saved_password', value: widget.passwordController.text.trim());
         await secureStorage.write(key: 'remember_me', value: 'true');
       } else {
         await secureStorage.delete(key: 'saved_email');
@@ -100,19 +114,26 @@ class _LoginPageState extends State<LoginPage> {
         SnackBar(content: Text('Login Successful as ${widget.role}!')),
       );
 
+      // Navigate to the appropriate home page based on role
       if (widget.role.toLowerCase() == 'government') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const GovernmentHomePage()),
         );
-      } else {
-        // TODO: Handle other roles
+      } else if (widget.role.toLowerCase() == 'citizen') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const CitizenHomePage()),
+        );
+      } else if (widget.role.toLowerCase() == 'advertiser') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdvertiserHomePage()),
+        );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login Failed: $e')),
-      );
+      ErrorHandler.showError(context, e);
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -126,91 +147,105 @@ class _LoginPageState extends State<LoginPage> {
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: Column(
-            children: [
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: "Email"),
-              ),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: "Password"),
-              ),
-              Row(
-                children: [
-                  Checkbox(
-                    value: rememberMe,
-                    onChanged: (value) {
-                      setState(() {
-                        rememberMe = value ?? false;
-                      });
-                    },
-                  ),
-                  const Text("Remember Me"),
-                ],
-              ),
-              const SizedBox(height: 20),
-              isLoading
-                  ? const CircularProgressIndicator()
-                  : Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: login,
-                          child: const Text("Login"),
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            print('[DEBUG] Biometric button pressed');
-                            final canCheck = await biometricAuth.canCheckBiometrics;
-                            final isSupported = await biometricAuth.isDeviceSupported();
-                            print('[DEBUG] canCheck=$canCheck, isSupported=$isSupported');
-
-                            if (!canCheck || !isSupported) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Biometrics not supported on this device."),
-                                ),
-                              );
-                              return;
-                            }
-
-                            final authenticated = await biometricAuth.authenticate(
-                              localizedReason: 'Authenticate using fingerprint or face ID',
-                              options: const AuthenticationOptions(biometricOnly: true),
-                            );
-
-                            print('[DEBUG] authenticated=$authenticated');
-
-                            if (authenticated) {
-                              login(auto: true);
-                            } else {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("Biometric login failed or was canceled.")),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.fingerprint),
-                          label: const Text("Use Biometric Login"),
-                        ),
-                      ],
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: widget.emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: "Email"),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: widget.passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: "Password"),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your password';
+                    }
+                    return null;
+                  },
+                ),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: rememberMe,
+                      onChanged: (value) {
+                        setState(() {
+                          rememberMe = value ?? false;
+                        });
+                      },
                     ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SignupPage(role: widget.role),
-                    ),
-                  );
-                },
-                child: const Text("Don't have an account? Sign up"),
-              ),
-            ],
+                    const Text("Remember Me"),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                isLoading
+                    ? const CircularProgressIndicator()
+                    : Column(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => login(),
+                            child: const Text("Login"),
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              print('[DEBUG] Biometric button pressed');
+                              final canCheck = await biometricAuth.canCheckBiometrics;
+                              final isSupported = await biometricAuth.isDeviceSupported();
+                              print('[DEBUG] canCheck=$canCheck, isSupported=$isSupported');
+
+                              if (!canCheck || !isSupported) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Biometrics not supported on this device."),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              final authenticated = await biometricAuth.authenticate(
+                                localizedReason: 'Authenticate using fingerprint or face ID',
+                                options: const AuthenticationOptions(biometricOnly: true),
+                              );
+
+                              print('[DEBUG] authenticated=$authenticated');
+
+                              if (authenticated) {
+                                login(auto: true);
+                              } else {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Biometric login failed or was canceled.")),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.fingerprint),
+                            label: const Text("Use Biometric Login"),
+                          ),
+                        ],
+                      ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SignupPage(role: widget.role),
+                      ),
+                    );
+                  },
+                  child: const Text("Don't have an account? Sign up"),
+                ),
+              ],
+            ),
           ),
         ),
       ),
