@@ -19,7 +19,7 @@ class InteractiveSlideToCallButton extends StatefulWidget {
   final Duration animationDuration;
 
   const InteractiveSlideToCallButton({
-    Key? key,
+    super.key,
     this.height = 60.0,
     this.thumbSize = 52.0, // Ensure thumbSize < height for padding
     this.trackColor = Colors.black12,
@@ -31,7 +31,7 @@ class InteractiveSlideToCallButton extends StatefulWidget {
     this.labelStyle = const TextStyle(color: Colors.black54, fontWeight: FontWeight.w600, fontSize: 16),
     required this.onSlideComplete,
     this.animationDuration = const Duration(milliseconds: 250),
-  }) : super(key: key);
+  });
 
   @override
   _InteractiveSlideToCallButtonState createState() =>
@@ -213,7 +213,7 @@ class EmergencyNumbersPage extends StatelessWidget {
           title,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: Container(
+        content: SizedBox(
           width: MediaQuery.of(dialogContext).size.width * 0.75, 
           child: Column(
             mainAxisSize: MainAxisSize.min,

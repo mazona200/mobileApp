@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'gov_reports_page.dart';
 import '../components/shared_app_bar.dart';
 import '../components/role_protected_page.dart';

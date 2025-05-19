@@ -9,7 +9,6 @@ import '../government/gov_home_page.dart';
 import '../utils/string_extensions.dart';
 import '../services/user_service.dart';
 import '../services/error_handler.dart';
-import '../services/theme_service.dart';
 import '../citizen/citizen_home_page.dart';
 import '../advertiser/advertiser_home_page.dart';
 

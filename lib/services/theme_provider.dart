@@ -10,10 +10,9 @@ class ThemeProvider extends InheritedWidget {
   ThemeProvider({
     super.key,
     required this.currentRole,
-    required Widget child,
+    required super.child,
   }) : 
-    theme = ThemeService.getRoleTheme(currentRole),
-    super(child: child);
+    theme = ThemeService.getRoleTheme(currentRole);
   
   // Get the theme provider from the context
   static ThemeProvider of(BuildContext context) {
@@ -34,10 +33,10 @@ class DynamicThemeProvider extends StatefulWidget {
   final String? initialRole;
   
   const DynamicThemeProvider({
-    Key? key,
+    super.key,
     required this.child,
     this.initialRole,
-  }) : super(key: key);
+  });
   
   @override
   State<DynamicThemeProvider> createState() => _DynamicThemeProviderState();

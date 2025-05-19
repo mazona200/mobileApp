@@ -3,9 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'common/role_selection_page.dart';
 import 'services/push_notifications.dart'; // ✅ Modular FCM service
-import 'services/theme_service.dart';
 import 'services/theme_provider.dart'; // Import our new theme provider
-import 'services/user_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
