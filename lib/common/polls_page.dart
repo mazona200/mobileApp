@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'poll_results_page.dart';
 import '../services/user_service.dart';
-import '../services/theme_service.dart';
 import '../components/role_protected_page.dart';
 
 class PollsPage extends StatefulWidget {
@@ -275,27 +274,14 @@ class _PollsPageState extends State<PollsPage> {
   
   @override
   Widget build(BuildContext context) {
-    // For citizen role, show voting UI
-    final isCitizen = userRole == 'citizen';
-    final Color themeColor = ThemeService.getRoleColor(userRole);
+    final Color themeColor = Theme.of(context).primaryColor;
+    final bool isCitizen = userRole == 'citizen';
     
     return RoleProtectedPage(
-      requiredRole: userRole,
+      requiredRole: "all_roles",
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Polls"),
-          backgroundColor: themeColor,
-          foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                _loadPolls();
-                _loadUserVotes();
-              },
-              tooltip: 'Refresh polls',
-            ),
-          ],
+          title: const Text('Community Polls'),
         ),
         body: isLoading 
           ? const Center(child: CircularProgressIndicator())

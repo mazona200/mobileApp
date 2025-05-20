@@ -6,6 +6,10 @@ import 'services/push_notifications.dart'; // ✅ Modular FCM service
 import 'services/theme_service.dart';
 import 'services/theme_provider.dart'; // Import our new theme provider
 import 'services/user_service.dart';
+import 'citizen/citizen_home_page.dart';
+import 'government/gov_home_page.dart';
+import 'advertiser/advertiser_home_page.dart';
+import 'dart:async';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -19,15 +23,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Clear any existing login states to ensure we always start at the role selection screen
-  // This is commented out for now, uncomment if you want to force logout on app restart
-  // try {
-  //   final secureStorage = FlutterSecureStorage();
-  //   await secureStorage.deleteAll();
-  // } catch (e) {
-  //   print('Error clearing secure storage: $e');
-  // }
   
   // Initialize Firebase with more robust error handling
   try {
@@ -96,6 +91,27 @@ class _MyAppState extends State<MyApp> {
       });
     }
   }
+  
+  // Helper method to determine initial route based on login status
+  Future<Widget> _getInitialScreen() async {
+    if (await UserService.isAnyUserLoggedIn()) {
+      final currentRole = await UserService.getCurrentLoggedInRole();
+      
+      if (currentRole != null) {
+        switch (currentRole.toLowerCase()) {
+          case 'citizen':
+            return const CitizenHomePage();
+          case 'government':
+            return const GovernmentHomePage();
+          case 'advertiser':
+            return const AdvertiserHomePage();
+          default:
+            break;
+        }
+      }
+    }
+    return const RoleSelectionPage();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,18 +120,28 @@ class _MyAppState extends State<MyApp> {
       child: Builder(
         builder: (context) {
           return MaterialApp(
-            title: 'Gov App',
+            title: 'GovGate',
             debugShowCheckedModeBanner: false,
             // Use the theme from our ThemeProvider
             theme: context.theme,
-            // Always start with the RoleSelectionPage
-            home: const RoleSelectionPage(),
-            // Prevent going back to splash screen
+            // Use FutureBuilder to determine the initial route based on login status
+            home: FutureBuilder<Widget>(
+              future: _getInitialScreen(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    body: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                return snapshot.data ?? const RoleSelectionPage();
+              },
+            ),
+            // Handle all routes through our protection logic
             onGenerateRoute: (settings) {
-              if (settings.name == '/') {
-                return MaterialPageRoute(builder: (_) => const RoleSelectionPage());
-              }
-              return null;
+              // All routes go to RoleSelectionPage first, which will handle redirection based on login status
+              return MaterialPageRoute(builder: (_) => const RoleSelectionPage());
             },
           );
         },

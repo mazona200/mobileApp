@@ -77,62 +77,78 @@ class UserService {
     return null;
   }
   
-  // ------ Multi-role login persistence methods ------
+  // ------ Single-role login persistence methods ------
   
-  // Save login state for a specific role
-  static Future<void> saveLoginState(String role, String uid, String email) async {
-    await _secureStorage.write(key: 'login_role_$role', value: 'true');
-    await _secureStorage.write(key: 'login_uid_$role', value: uid);
-    await _secureStorage.write(key: 'login_email_$role', value: email);
+  // Check if any user is currently logged in
+  static Future<bool> isAnyUserLoggedIn() async {
+    final currentRole = await _secureStorage.read(key: 'current_role');
+    return currentRole != null && currentRole.isNotEmpty;
   }
   
-  // Clear login state for a specific role
-  static Future<void> clearLoginState(String role) async {
-    await _secureStorage.delete(key: 'login_role_$role');
-    await _secureStorage.delete(key: 'login_uid_$role');
-    await _secureStorage.delete(key: 'login_email_$role');
+  // Save login state for the current role (clearing any other roles first)
+  static Future<void> saveLoginState(String role, String uid, String email) async {
+    // Clear any existing login states first
+    await logoutFromAllRoles();
+    
+    // Then save the new login state
+    await _secureStorage.write(key: 'current_role', value: role);
+    await _secureStorage.write(key: 'current_uid', value: uid);
+    await _secureStorage.write(key: 'current_email', value: email);
+  }
+  
+  // Clear all login states
+  static Future<void> logoutFromAllRoles() async {
+    await _auth.signOut();
+    await _secureStorage.delete(key: 'current_role');
+    await _secureStorage.delete(key: 'current_uid');
+    await _secureStorage.delete(key: 'current_email');
+  }
+  
+  // For backward compatibility - redirects to logoutFromAllRoles
+  static Future<void> clearLoginState() async {
+    await logoutFromAllRoles();
   }
   
   // Check if a specific role is logged in
   static Future<bool> isRoleLoggedIn(String role) async {
-    final value = await _secureStorage.read(key: 'login_role_$role');
-    return value == 'true';
+    final currentRole = await _secureStorage.read(key: 'current_role');
+    return currentRole == role;
   }
   
-  // Get all logged-in roles
+  // Get all logged-in roles (will only ever return a list with at most one role)
   static Future<List<String>> getLoggedInRoles() async {
     List<String> roles = [];
     
-    // Check each possible role
-    for (String role in ['citizen', 'government', 'advertiser']) {
-      if (await isRoleLoggedIn(role)) {
-        roles.add(role);
-      }
+    final currentRole = await _secureStorage.read(key: 'current_role');
+    if (currentRole != null && currentRole.isNotEmpty) {
+      roles.add(currentRole);
     }
     
     return roles;
   }
   
-  // Log out from all roles
-  static Future<void> logoutFromAllRoles() async {
-    await _auth.signOut();
-    await clearLoginState('citizen');
-    await clearLoginState('government');
-    await clearLoginState('advertiser');
-  }
-  
-  // Get auth credentials for a specific role
+  // Get auth credentials for the current role
   static Future<Map<String, String>?> getRoleCredentials(String role) async {
-    final uid = await _secureStorage.read(key: 'login_uid_$role');
-    final email = await _secureStorage.read(key: 'login_email_$role');
+    final currentRole = await _secureStorage.read(key: 'current_role');
     
-    if (uid != null && email != null) {
-      return {
-        'uid': uid,
-        'email': email,
-      };
+    // Only return credentials if the requested role matches the current role
+    if (currentRole == role) {
+      final uid = await _secureStorage.read(key: 'current_uid');
+      final email = await _secureStorage.read(key: 'current_email');
+      
+      if (uid != null && email != null) {
+        return {
+          'uid': uid,
+          'email': email,
+        };
+      }
     }
     
     return null;
+  }
+  
+  // Get current logged in role
+  static Future<String?> getCurrentLoggedInRole() async {
+    return await _secureStorage.read(key: 'current_role');
   }
 } 

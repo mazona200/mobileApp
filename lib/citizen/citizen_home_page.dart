@@ -6,6 +6,8 @@ import '../common/polls_page.dart';
 import '../services/user_service.dart';
 import '../services/theme_service.dart';
 import 'emergency_numbers_page.dart';
+import 'report_problem_page.dart';
+import 'contact_government_page.dart';
 
 class CitizenHomePage extends StatelessWidget {
   const CitizenHomePage({super.key});
@@ -113,7 +115,10 @@ class CitizenHomePage extends StatelessWidget {
                         title: "Contact Government",
                         color: Colors.orange,
                         onTap: () {
-                          // TODO: Navigate to messaging page
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ContactGovernmentPage()),
+                          );
                         },
                       ),
                       _buildDashboardCard(
@@ -122,7 +127,10 @@ class CitizenHomePage extends StatelessWidget {
                         title: "Report Problem",
                         color: Colors.red,
                         onTap: () {
-                          // TODO: Navigate to problem reporting page
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ReportProblemPage()),
+                          );
                         },
                       ),
                     ],

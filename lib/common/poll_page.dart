@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile_project/models/poll_model.dart';
+import '../components/role_protected_page.dart';
 
 class PollPage extends StatefulWidget {
   final String pollId;
@@ -85,42 +86,45 @@ class _PollPageState extends State<PollPage> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Poll')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              poll!.question,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            ...poll!.options.map((opt) => RadioListTile<String>(
+    return RoleProtectedPage(
+      requiredRole: "all_roles",
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Poll')),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                poll!.question,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ...poll!.options.map((opt) => RadioListTile<String>(
+                    title: Text(opt),
+                    value: opt,
+                    groupValue: selectedOption,
+                    onChanged: (val) => setState(() => selectedOption = val),
+                  )),
+              ElevatedButton(
+                onPressed: vote,
+                child: const Text('Vote'),
+              ),
+              const SizedBox(height: 20),
+              const Divider(),
+              const Text(
+                'Results',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              ...poll!.options.map((opt) {
+                final votes = poll!.votes[opt] ?? 0;
+                return ListTile(
                   title: Text(opt),
-                  value: opt,
-                  groupValue: selectedOption,
-                  onChanged: (val) => setState(() => selectedOption = val),
-                )),
-            ElevatedButton(
-              onPressed: vote,
-              child: const Text('Vote'),
-            ),
-            const SizedBox(height: 20),
-            const Divider(),
-            const Text(
-              'Results',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            ...poll!.options.map((opt) {
-              final votes = poll!.votes[opt] ?? 0;
-              return ListTile(
-                title: Text(opt),
-                trailing: Text('$votes votes'),
-              );
-            }),
-          ],
+                  trailing: Text('$votes votes'),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );

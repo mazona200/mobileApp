@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/theme_service.dart';
+import '../components/role_protected_page.dart';
 
 class PollResultsPage extends StatefulWidget {
   final String pollId;
@@ -131,17 +132,18 @@ class _PollResultsPageState extends State<PollResultsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color themeColor = ThemeService.getRoleColor('citizen');
+    final Color themeColor = Theme.of(context).primaryColor;
     
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Poll Results"),
-        backgroundColor: themeColor,
-        foregroundColor: Colors.white,
+    return RoleProtectedPage(
+      requiredRole: "all_roles",
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Poll Results"),
+        ),
+        body: isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : _buildContent(themeColor),
       ),
-      body: isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : _buildContent(themeColor),
     );
   }
   
