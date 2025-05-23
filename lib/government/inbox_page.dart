@@ -1,15 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InboxPage extends StatelessWidget {
   const InboxPage({super.key});
 
+  Future<String> _getSenderEmail(String uid) async {
+    if (uid.isEmpty) return 'Unknown';
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (userDoc.exists) {
+      return userDoc.data()?['email'] ?? 'Unknown';
+    }
+    return 'Unknown';
+  }
+
+  void _replyToMessage(BuildContext context, DocumentReference messageRef) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Reply to Message'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Your Reply'),
+          maxLines: 4,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final reply = controller.text.trim();
+              if (reply.isNotEmpty) {
+                await messageRef.collection('replies').add({
+                  'message': reply,
+                  'timestamp': FieldValue.serverTimestamp(),
+                  'repliedBy': FirebaseAuth.instance.currentUser?.email ?? 'unknown',
+                });
+
+                await messageRef.update({
+                  'lastRepliedAt': FieldValue.serverTimestamp(),
+                  'hasReply': true,
+                });
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final messagesStream = FirebaseFirestore.instance
-        .collection('messages')
-        .where('recipientRole', isEqualTo: 'government')  // Filter messages for gov
-        .orderBy('timestamp', descending: true)
+        .collection('government_messages')
+        .orderBy('createdAt', descending: true)
         .snapshots();
 
     return Scaffold(
@@ -26,45 +76,71 @@ class InboxPage extends StatelessWidget {
 
           final docs = snapshot.data!.docs;
 
-          return ListView.separated(
+          return ListView.builder(
             itemCount: docs.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final doc = docs[index];
-              final data = doc.data()! as Map<String, dynamic>;
-              final title = data['title'] ?? 'No title';
-              final content = data['content'] ?? '';
-              final timestamp = data['timestamp'] as Timestamp?;
-              final isRead = data['isRead'] ?? false;
+              final data = doc.data() as Map<String, dynamic>;
+              final subject = data['subject'] ?? 'No subject';
+              final message = data['message'] ?? 'No content';
+              final senderUid = data['userId'] ?? '';
+              final timestamp = data['createdAt'] as Timestamp?;
 
-              return ListTile(
-                leading: Icon(
-                  isRead ? Icons.mark_email_read : Icons.mark_email_unread,
-                  color: isRead ? Colors.grey : Colors.blue,
-                ),
-                title: Text(title),
-                subtitle: Text(content, maxLines: 2, overflow: TextOverflow.ellipsis),
-                trailing: timestamp != null
-                    ? Text(
-                        TimeOfDay.fromDateTime(timestamp.toDate()).format(context),
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      )
-                    : null,
-                onTap: () async {
-                  // Optional: mark as read
-                  if (!isRead) {
-                    await doc.reference.update({'isRead': true});
-                  }
-                  // Show message details or do something else
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: Text(title),
-                      content: Text(content),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Close'),
+              return FutureBuilder<String>(
+                future: _getSenderEmail(senderUid),
+                builder: (context, emailSnap) {
+                  final senderEmail = emailSnap.data ?? 'Loading...';
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: ExpansionTile(
+                      leading: const Icon(Icons.mark_email_unread),
+                      title: Text(subject, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(senderEmail),
+                          if (timestamp != null)
+                            Text(
+                              timestamp.toDate().toLocal().toString(),
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                        ],
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                          child: Text(message),
+                        ),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: doc.reference.collection('replies').orderBy('timestamp').snapshots(),
+                          builder: (context, replySnap) {
+                            if (!replySnap.hasData || replySnap.data!.docs.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text('No replies yet'),
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: replySnap.data!.docs.map((replyDoc) {
+                                final reply = replyDoc['message'] ?? '';
+                                final time = (replyDoc['timestamp'] as Timestamp?)?.toDate().toLocal();
+                                return ListTile(
+                                  leading: const Icon(Icons.reply, color: Colors.green),
+                                  title: Text(reply),
+                                  subtitle: time != null ? Text(time.toString()) : null,
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => _replyToMessage(context, doc.reference),
+                            child: const Text('Reply'),
+                          ),
                         ),
                       ],
                     ),

@@ -31,7 +31,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
     super.dispose();
   }
   
-  Future<void> _submitComment() async {
+  Future<void> submitComment() async {
     if (_commentController.text.trim().isEmpty) return;
     
     setState(() => _isSubmitting = true);
@@ -67,12 +67,12 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
     }
   }
   
-  String _formatDate(Timestamp? timestamp) {
+  String formatDate(Timestamp? timestamp) {
     if (timestamp == null) return 'Date unknown';
     return DateFormat('MMMM d, yyyy - h:mm a').format(timestamp.toDate());
   }
   
-  Color _getCategoryColor(String category) {
+  Color getCategoryColor(String category) {
     switch (category.toLowerCase()) {
       case 'health':
         return Colors.green.shade700;
@@ -151,7 +151,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: _getCategoryColor(category),
+                                    color: getCategoryColor(category),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -166,7 +166,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  _formatDate(timestamp),
+                                  formatDate(timestamp),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade600,
@@ -232,7 +232,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
                           const Divider(height: 32),
                           
                           // Comments list
-                          _buildCommentsSection(),
+                          buildCommentsSection(),
                         ],
                       ),
                     ),
@@ -300,7 +300,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
                         )
                       else
                         IconButton(
-                          onPressed: _submitComment,
+                          onPressed: submitComment,
                           icon: const Icon(Icons.send),
                           style: IconButton.styleFrom(
                             backgroundColor: Theme.of(context).primaryColor,
@@ -318,7 +318,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
     );
   }
 
-  Widget _buildCommentsSection() {
+  Widget buildCommentsSection() {
     return StreamBuilder<QuerySnapshot>(
       stream: DatabaseService.getAnnouncementCommentsStream(widget.announcementId),
       builder: (context, snapshot) {
@@ -346,14 +346,14 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
             final isAnonymous = comment['isAnonymous'] ?? false;
             final commentTimestamp = comment['createdAt'];
             
-            return _buildCommentCard(commentText, userName, isAnonymous, commentTimestamp);
+            return buildCommentCard(commentText, userName, isAnonymous, commentTimestamp);
           },
         );
       },
     );
   }
   
-  Widget _buildCommentCard(String text, String userName, bool isAnonymous, Timestamp? timestamp) {
+  Widget buildCommentCard(String text, String userName, bool isAnonymous, Timestamp? timestamp) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
@@ -384,7 +384,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
                 ),
                 const Spacer(),
                 Text(
-                  _formatDate(timestamp),
+                  formatDate(timestamp),
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey.shade600,

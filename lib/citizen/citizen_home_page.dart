@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../components/role_protected_page.dart';
 import '../components/shared_app_bar.dart';
 import '../government/announcements_list_page.dart';
@@ -6,7 +9,7 @@ import '../common/polls_page.dart';
 import '../services/user_service.dart';
 import '../services/theme_service.dart';
 import 'emergency_numbers_page.dart';
-import 'report_problem_page.dart';
+import 'problem_reporting_page.dart'; // Keep this import
 import 'contact_government_page.dart';
 
 class CitizenHomePage extends StatelessWidget {
@@ -25,20 +28,19 @@ class CitizenHomePage extends StatelessWidget {
           future: UserService.getCurrentUserData(),
           builder: (context, snapshot) {
             String userName = 'Citizen';
-            
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-            
             if (snapshot.hasData && snapshot.data != null) {
               userName = snapshot.data!['name'] ?? 'Citizen';
             }
-            
+
+            final uid = FirebaseAuth.instance.currentUser?.uid;
+
             return SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Welcome header
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -52,30 +54,51 @@ class CitizenHomePage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Welcome, $userName',
-                          style: ThemeService.headingStyle,
-                        ),
+                        Text('Welcome, $userName', style: ThemeService.headingStyle),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Stay connected with your community',
-                          style: TextStyle(fontSize: 16),
-                        ),
+                        const Text('Stay connected with your community', style: TextStyle(fontSize: 16)),
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
-                  // Quick actions
+
+                  if (uid != null)
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('messages')
+                          .where('senderUid', isEqualTo: uid)
+                          .where('hasReply', isEqualTo: true)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                          final last = snapshot.data!.docs.first;
+                          final lastReply = last['lastRepliedAt'] != null
+                              ? (last['lastRepliedAt'] as Timestamp).toDate().toLocal().toString()
+                              : 'Recently';
+
+                          return Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Card(
+                              color: Colors.green.shade50,
+                              elevation: 2,
+                              child: ListTile(
+                                leading: const Icon(Icons.notifications_active, color: Colors.green),
+                                title: const Text('New Reply from Government'),
+                                subtitle: Text('Last replied: $lastReply'),
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
+
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text('Quick Actions', style: ThemeService.subheadingStyle),
                   ),
-                  
                   const SizedBox(height: 10),
-                  
-                  // Actions grid
                   GridView.count(
                     physics: const NeverScrollableScrollPhysics(),
                     shrinkWrap: true,
@@ -88,7 +111,7 @@ class CitizenHomePage extends StatelessWidget {
                       _buildDashboardCard(
                         context: context,
                         icon: Icons.announcement_outlined,
-                        title: "Announcements", 
+                        title: "Announcements",
                         color: Colors.blue,
                         onTap: () {
                           Navigator.push(
@@ -135,10 +158,8 @@ class CitizenHomePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
                   const SizedBox(height: 20),
-                  
-                  // Emergency numbers
+
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: InkWell(
@@ -190,7 +211,7 @@ class CitizenHomePage extends StatelessWidget {
                             Container(
                               width: 40,
                               height: 40,
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                               ),
@@ -241,4 +262,4 @@ class CitizenHomePage extends StatelessWidget {
       ),
     );
   }
-} 
+}

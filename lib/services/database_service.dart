@@ -6,6 +6,7 @@ class DatabaseService {
   // Firebase instances
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
+  // ignore: unused_field
   static final FirebaseStorage _storage = FirebaseStorage.instance;
   
   // Collection references

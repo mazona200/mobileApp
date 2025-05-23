@@ -9,7 +9,7 @@ import '../services/theme_service.dart';
 class AdvertiserHomePage extends StatelessWidget {
   const AdvertiserHomePage({super.key});
 
-  void _showNotifications(BuildContext context) {
+  void showNotifications(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -25,7 +25,7 @@ class AdvertiserHomePage extends StatelessWidget {
     );
   }
 
-  Future<void> _handleMenuSelection(BuildContext context, String value) async {
+  Future<void> handleMenuSelection(BuildContext context, String value) async {
     if (value == 'settings') {
       // TODO: Navigate to SettingsPage()
     } else if (value == 'logout') {

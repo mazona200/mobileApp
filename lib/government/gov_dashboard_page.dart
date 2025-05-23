@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'gov_reports_page.dart';
 import '../components/shared_app_bar.dart';
 import '../components/role_protected_page.dart';
@@ -9,7 +8,7 @@ import '../common/role_selection_page.dart';
 class GovDashboardPage extends StatelessWidget {
   const GovDashboardPage({super.key});
 
-  void _showNotifications(BuildContext context) {
+  void showNotifications(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -25,11 +24,10 @@ class GovDashboardPage extends StatelessWidget {
     );
   }
 
-  Future<void> _handleMenuSelection(BuildContext context, String value) async {
+  Future<void> handleMenuSelection(BuildContext context, String value) async {
     if (value == 'settings') {
       // TODO: Navigate to SettingsPage()
     } else if (value == 'logout') {
-      // Show confirmation dialog
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -48,14 +46,12 @@ class GovDashboardPage extends StatelessWidget {
           ],
         ),
       );
-      
+
       if (confirmed == true) {
-        // Proper logout that clears all login states
         await UserService.logoutFromAllRoles();
-        
+
         if (!context.mounted) return;
-        
-        // Navigate to role selection page
+
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const RoleSelectionPage()),
           (route) => false,
@@ -75,19 +71,24 @@ class GovDashboardPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Icon(Icons.reply),
-              ),
               const SizedBox(height: 30),
-              InkWell(
-                onTap: () {
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: Colors.blueAccent,
+                ),
+                icon: const Icon(Icons.report, color: Colors.white),
+                label: const Text(
+                  "View Reports",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const GovReportsPage()),
                   );
                 },
-                child: const Text("• View reports", style: TextStyle(fontSize: 18)),
               ),
             ],
           ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/user_service.dart';
 import '../services/theme_provider.dart';
 import '../common/role_selection_page.dart';

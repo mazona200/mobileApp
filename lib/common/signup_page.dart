@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/string_extensions.dart';
 import '../services/user_service.dart';
-import '../services/error_handler.dart';
 import 'login_page.dart';
 import '../services/theme_service.dart';
 import 'package:intl/intl.dart';
