@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'signup_page.dart';
 import '../government/gov_home_page.dart';
 import '../citizen/citizen_home_page.dart';
 import '../advertiser/advertiser_home_page.dart';
-import '../services/user_service.dart';
+import '../services/auth_service.dart';
 import '../services/error_handler.dart';
 import '../utils/string_extensions.dart';
 
@@ -24,12 +20,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   bool isLoading = false;
   bool rememberMe = false;
-
-  FirebaseAuth get _auth => FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -39,9 +32,10 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _loadSavedCredentials() async {
     try {
-      final savedEmail = await _secureStorage.read(key: 'saved_email');
-      final savedPassword = await _secureStorage.read(key: 'saved_password');
-      final savedRemember = (await _secureStorage.read(key: 'remember_me')) == 'true';
+      final credentials = await AuthService.loadSavedCredentials();
+      final savedEmail = credentials['email'];
+      final savedPassword = credentials['password'];
+      final savedRemember = credentials['remember'] == 'true';
 
       if (savedRemember && mounted) {
         setState(() {
@@ -61,55 +55,23 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = true);
 
     try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      // Use the unified AuthService for login
+      await AuthService.signInWithEmailAndPassword(
         email: widget.emailController.text.trim(),
         password: widget.passwordController.text.trim(),
-      );
-
-      // Fetch user document to check role
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .get();
-
-      if (!docSnapshot.exists) {
-        // Create new user document if missing
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'email': widget.emailController.text.trim(),
-          'role': widget.role,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      } else {
-        final storedRole = docSnapshot.data()?['role'] as String?;
-        if (storedRole != widget.role) {
-          throw Exception('You are registered as a $storedRole, not as a ${widget.role}');
-        }
-      }
-
-      // Save login state securely
-      await UserService.saveLoginState(
-        widget.role,
-        userCredential.user!.uid,
-        userCredential.user!.email ?? widget.emailController.text.trim(),
+        role: widget.role,
       );
 
       // Save or clear stored credentials based on rememberMe
-      if (rememberMe) {
-        await _secureStorage.write(key: 'saved_email', value: widget.emailController.text.trim());
-        await _secureStorage.write(key: 'saved_password', value: widget.passwordController.text.trim());
-        await _secureStorage.write(key: 'remember_me', value: 'true');
-      } else {
-        await _secureStorage.delete(key: 'saved_email');
-        await _secureStorage.delete(key: 'saved_password');
-        await _secureStorage.write(key: 'remember_me', value: 'false');
-      }
+      await AuthService.saveCredentials(
+        widget.emailController.text.trim(),
+        widget.passwordController.text.trim(),
+        rememberMe,
+      );
 
       if (!mounted) return;
 
-      debugPrint('🔐 Login successful: ${userCredential.user!.email} with role ${widget.role}');
+      debugPrint('🔐 Login successful: ${widget.emailController.text} with role ${widget.role}');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login successful as ${widget.role}!')),

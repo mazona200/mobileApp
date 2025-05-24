@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/string_extensions.dart';
-import '../services/user_service.dart';
+import '../services/auth_service.dart';
 import 'login_page.dart';
 import '../services/theme_service.dart';
 import 'package:intl/intl.dart';
@@ -102,24 +102,20 @@ class _SignupPageState extends State<SignupPage> {
         return;
       }
       
-      // Create the user in Firebase Authentication
-      final userCredential = await _auth!.createUserWithEmailAndPassword(
+      // Create the user account with additional data
+      await AuthService.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
-      );
-      
-      // Save user data with role to Firestore
-      await UserService.createUser(
-        uid: userCredential.user!.uid,
-        email: emailController.text.trim(),
         role: widget.role,
-        name: nameController.text.trim(),
-        phone: phoneController.text.trim(),
-        nationalId: nationalIdController.text.trim(),
-        dateOfBirth: dateOfBirthController.text,
-        profession: professionController.text.trim(),
-        gender: selectedGender,
-        hometown: hometownController.text.trim(),
+        additionalData: {
+          'name': nameController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'nationalId': nationalIdController.text.trim(),
+          'dateOfBirth': dateOfBirthController.text,
+          'profession': professionController.text.trim(),
+          'gender': selectedGender,
+          'hometown': hometownController.text.trim(),
+        },
       );
       
       if (!mounted) return;

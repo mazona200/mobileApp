@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
 import '../services/theme_service.dart';
-import '../services/user_service.dart';
+import '../services/auth_service.dart';
 import '../government/gov_home_page.dart';
 import '../citizen/citizen_home_page.dart';
 import '../advertiser/advertiser_home_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RoleSelectionPage extends StatefulWidget {
   const RoleSelectionPage({super.key});
@@ -42,20 +40,26 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
     'advertiser': GlobalKey<FormState>(),
   };
   
+  final Map<String, bool> rememberMe = {
+    'citizen': false,
+    'government': false,
+    'advertiser': false,
+  };
+  
   bool _isChecking = true;
   
   @override
   void initState() {
     super.initState();
-    // Check for existing logins
     _checkExistingLogins();
+    _loadSavedCredentials();
   }
   
   Future<void> _checkExistingLogins() async {
     // Check if any user is logged in
-    if (await UserService.isAnyUserLoggedIn()) {
+    if (await AuthService.isAnyUserLoggedIn()) {
       // Get the current role
-      final currentRole = await UserService.getCurrentLoggedInRole();
+      final currentRole = await AuthService.getCachedCurrentRole();
       
       if (mounted && currentRole != null) {
         // Navigate to the appropriate home page based on role
@@ -68,6 +72,28 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
           _isChecking = false;
         });
       }
+    }
+  }
+  
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final credentials = await AuthService.loadSavedCredentials();
+      final savedEmail = credentials['email'];
+      final savedPassword = credentials['password'];
+      final remember = credentials['remember'] == 'true';
+      
+      if (remember && savedEmail != null && savedPassword != null && mounted) {
+        setState(() {
+          // Apply saved credentials to all role forms
+          for (final role in AuthService.validRoles) {
+            emailControllers[role]?.text = savedEmail;
+            passwordControllers[role]?.text = savedPassword;
+            rememberMe[role] = true;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading saved credentials: $e');
     }
   }
   
@@ -132,43 +158,18 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
     );
     
     try {
-      // Perform Firebase authentication directly
-      final auth = FirebaseAuth.instance;
-      final userCredential = await auth.signInWithEmailAndPassword(
+      // Use the unified AuthService for login
+      await AuthService.signInWithEmailAndPassword(
         email: emailControllers[role]!.text.trim(),
         password: passwordControllers[role]!.text.trim(),
+        role: role,
       );
       
-      // Check if user exists in Firestore
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .get();
-      
-      if (!docSnapshot.exists) {
-        // Create a minimal user record if it doesn't exist
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-              'email': emailControllers[role]!.text.trim(),
-              'role': role,
-              'createdAt': FieldValue.serverTimestamp(),
-            });
-      } else {
-        // Check if user role matches the requested role
-        final String? storedRole = docSnapshot.data()?['role'];
-        
-        if (storedRole != role) {
-          throw Exception('You are registered as a $storedRole, not as a $role');
-        }
-      }
-      
-      // Save login state for this role (this will clear any other roles)
-      await UserService.saveLoginState(
-        role, 
-        userCredential.user!.uid, 
-        userCredential.user!.email ?? emailControllers[role]!.text.trim()
+      // Save credentials if remember me is checked
+      await AuthService.saveCredentials(
+        emailControllers[role]!.text.trim(),
+        passwordControllers[role]!.text.trim(),
+        rememberMe[role] ?? false,
       );
       
       // Close the loading dialog
@@ -185,9 +186,12 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
       // Show error message
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().contains('Exception:') 
-            ? e.toString().split('Exception: ')[1] 
-            : 'Login failed. Please check your credentials.')),
+          SnackBar(
+            content: Text(e.toString().contains('Exception:') 
+              ? e.toString().split('Exception: ')[1] 
+              : 'Login failed. Please check your credentials.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -552,7 +556,22 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 5),
+                  // Remember Me checkbox
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: rememberMe[role] ?? false,
+                        onChanged: (value) {
+                          setState(() {
+                            rememberMe[role] = value ?? false;
+                          });
+                        },
+                      ),
+                      const Text("Remember Me", style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
                   // Login button
                   SizedBox(
                     height: 38, // Fixed height for button

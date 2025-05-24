@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/poll_model.dart';
+import '../components/role_protected_page.dart';
 import 'poll_page.dart';
 
 class PollsPage extends StatelessWidget {
@@ -8,12 +9,14 @@ class PollsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Current Polls'),
-        centerTitle: true,
+    return RoleProtectedPage.forAllRoles(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Current Polls'),
+          centerTitle: true,
+        ),
+        body: _buildPollsList(),
       ),
-      body: _buildPollsList(),
     );
   }
 
@@ -36,7 +39,7 @@ class PollsPage extends StatelessWidget {
           try {
             return Poll.fromDoc(doc);
           } catch (e) {
-            print('Error parsing poll ${doc.id}: $e');
+            debugPrint('Error parsing poll ${doc.id}: $e');
             return null;
           }
         }).whereType<Poll>().toList() ?? [];

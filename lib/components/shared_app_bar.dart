@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/user_service.dart';
-import '../services/theme_service.dart';
+import '../services/auth_service.dart';
 import '../services/theme_provider.dart';
 import '../common/role_selection_page.dart';
 
@@ -37,8 +35,8 @@ class _SharedAppBarState extends State<SharedAppBar> {
 
   Future<void> _loadUserInfo() async {
     try {
-      final userData = await UserService.getCurrentUserData();
-      final currentRole = await UserService.getCurrentLoggedInRole();
+      final userData = await AuthService.getCurrentUserData();
+      final currentRole = await AuthService.getCachedCurrentRole();
       
       if (mounted) {
         setState(() {
@@ -48,68 +46,109 @@ class _SharedAppBarState extends State<SharedAppBar> {
         });
       }
     } catch (e) {
-      print('Error loading user info: $e');
+      debugPrint('Error loading user info: $e');
       if (mounted) {
         setState(() => isLoading = false);
       }
     }
   }
 
-  void _logout(BuildContext context) async {
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
+  void showNotifications(BuildContext context) {
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Logout'),
-        content: const Text('Are you sure you want to log out?'),
+        title: const Text("Notifications"),
+        content: const Text("You have no new notifications."),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Logout'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
           ),
         ],
       ),
     );
-    
-    if (confirmed == true) {
-      // Clear all login states
-      await UserService.logoutFromAllRoles();
-      if (!context.mounted) return;
-      
-      // Navigate to role selection page
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RoleSelectionPage()),
-        (route) => false,
+  }
+
+  Future<void> handleMenuSelection(BuildContext context, String value) async {
+    if (value == 'settings') {
+      // TODO: Navigate to SettingsPage()
+    } else if (value == 'logout') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
       );
+
+      if (confirmed == true) {
+        await AuthService.signOut();
+
+        if (!context.mounted) return;
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const RoleSelectionPage()),
+          (route) => false,
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get current role from context if possible, otherwise use the one from user data
-    final currentRole = context.currentRole != 'default' ? context.currentRole : userRole ?? 'default';
-    final Color roleColor = ThemeService.getRoleColor(currentRole);
-    
     return AppBar(
       title: Text(widget.title),
-      backgroundColor: roleColor,
-      automaticallyImplyLeading: !widget.isHomePage,
+      backgroundColor: context.currentRole == 'government'
+          ? Colors.blue.shade700
+          : context.currentRole == 'citizen'
+              ? Colors.green.shade600
+              : context.currentRole == 'advertiser'
+                  ? Colors.orange.shade600
+                  : Colors.blue.shade700,
+      foregroundColor: Colors.white,
+      elevation: 2,
       actions: [
-        if (widget.additionalActions != null) ...widget.additionalActions!,
-          
-        // Show logout button only on homepages
-        if (widget.isHomePage)
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () => _logout(context),
-          ),
-        const SizedBox(width: 8),
+        ...?widget.additionalActions,
+        IconButton(
+          icon: const Icon(Icons.notifications),
+          onPressed: () => showNotifications(context),
+        ),
+        PopupMenuButton<String>(
+          onSelected: (value) => handleMenuSelection(context, value),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings),
+                  SizedBox(width: 8),
+                  Text('Settings'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Logout', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

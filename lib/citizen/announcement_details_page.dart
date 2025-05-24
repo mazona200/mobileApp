@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../components/role_protected_page.dart';
-import '../services/user_service.dart';
 import '../services/database_service.dart';
 
 class AnnouncementDetailsPage extends StatefulWidget {
@@ -95,8 +93,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
     final timestamp = widget.announcement['createdAt'];
     final imageUrl = widget.announcement['imageUrl'];
     
-    return RoleProtectedPage(
-      requiredRole: "all_roles",
+    return RoleProtectedPage.forAllRoles(
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Announcement Details'),

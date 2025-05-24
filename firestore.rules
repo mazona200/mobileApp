@@ -7,10 +7,6 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
     function hasRole(role) {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
@@ -23,23 +19,22 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update, delete: if isOwner(userId) || isAdmin();
+      allow update, delete: if isOwner(userId);
     }
     
     // Announcements collection
     match /announcements/{announcementId} {
       allow read: if true; // Public read access
       allow create, update: if isAuthenticated() && hasRole('government');
-      allow delete: if isAdmin();
+      allow delete: if isAuthenticated() && hasRole('government');
       
       // Comments subcollection
       match /comments/{commentId} {
         allow read: if true; // Public read access
         allow create: if isAuthenticated();
-        allow update, delete: if isAdmin() || 
-          (isAuthenticated() && 
-           request.auth.uid == resource.data.userId && 
-           !resource.data.isAnonymous);
+        allow update, delete: if isAuthenticated() && 
+          request.auth.uid == resource.data.userId && 
+          !resource.data.isAnonymous;
       }
     }
     
@@ -51,7 +46,7 @@ service cloud.firestore {
         (hasRole('citizen') && isOwner(resource.data.userId)) || 
         hasRole('government')
       );
-      allow delete: if isAdmin();
+      allow delete: if isAuthenticated() && hasRole('government');
     }
     
     // Government Messages collection
@@ -68,14 +63,14 @@ service cloud.firestore {
         resource.data.status == 'Unread' || 
         resource.data.status == 'Read'
       );
-      allow delete: if isAdmin();
+      allow delete: if isAuthenticated() && hasRole('government');
     }
     
     // Polls collection
     match /polls/{pollId} {
       allow read: if true; // Public read access
       allow create, update: if isAuthenticated() && hasRole('government');
-      allow delete: if isAdmin();
+      allow delete: if isAuthenticated() && hasRole('government');
       
       // Votes subcollection
       match /votes/{voteId} {
@@ -85,7 +80,7 @@ service cloud.firestore {
           isOwner(voteId)
         );
         allow create, update: if isAuthenticated() && isOwner(voteId);
-        allow delete: if isAdmin();
+        allow delete: if isAuthenticated() && hasRole('government');
       }
     }
     
@@ -93,6 +88,20 @@ service cloud.firestore {
     match /emergency_contacts/{contactId} {
       allow read: if true; // Public read access
       allow create, update, delete: if isAuthenticated() && hasRole('government');
+    }
+    
+    // Advertisements collection
+    match /ads/{adId} {
+      allow read: if true; // Public read access
+      allow create: if isAuthenticated() && hasRole('advertiser');
+      allow update: if isAuthenticated() && (
+        (hasRole('advertiser') && isOwner(resource.data.userId)) ||
+        hasRole('government') // Government can approve/reject ads
+      );
+      allow delete: if isAuthenticated() && (
+        (hasRole('advertiser') && isOwner(resource.data.userId)) ||
+        hasRole('government')
+      );
     }
   }
 } 

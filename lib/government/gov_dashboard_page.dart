@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'gov_reports_page.dart';
 import '../components/shared_app_bar.dart';
 import '../components/role_protected_page.dart';
-import '../services/user_service.dart';
+import '../services/auth_service.dart';
 import '../common/role_selection_page.dart';
 
 class GovDashboardPage extends StatelessWidget {
@@ -48,7 +48,7 @@ class GovDashboardPage extends StatelessWidget {
       );
 
       if (confirmed == true) {
-        await UserService.logoutFromAllRoles();
+        await AuthService.signOut();
 
         if (!context.mounted) return;
 

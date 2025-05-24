@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'common/role_selection_page.dart';
 import 'services/push_notifications.dart';
 import 'services/theme_provider.dart';
-import 'services/user_service.dart';
+import 'services/auth_service.dart';
 
 import 'citizen/citizen_home_page.dart';
 import 'government/gov_home_page.dart';
@@ -16,7 +14,7 @@ import 'advertiser/advertiser_home_page.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print('[BG] FCM received: ${message.notification?.title}');
+  debugPrint('[BG] FCM received: ${message.notification?.title}');
 }
 
 void main() async {
@@ -26,41 +24,10 @@ void main() async {
     await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-    final secureStorage = const FlutterSecureStorage();
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      await secureStorage.delete(key: 'user_role');
-      await secureStorage.delete(key: 'current_role');
-      print('[Auth] No user at startup; cleared cached roles.');
-    } else {
-      print('[Auth] User at startup: ${user.email} (${user.uid})');
-    }
-
-    FirebaseAuth.instance.authStateChanges().listen((user) async {
-      if (user == null) {
-        // Wait a bit before clearing cached roles to avoid false signout on reload
-        await Future.delayed(const Duration(seconds: 5));
-        if (FirebaseAuth.instance.currentUser == null) {
-          await secureStorage.delete(key: 'user_role');
-          await secureStorage.delete(key: 'current_role');
-          print('[Auth] Confirmed no user after delay; cleared cached roles.');
-        } else {
-          print('[Auth] User re-signed in during delay; not clearing roles.');
-        }
-      } else {
-        final role = await UserService.getUserRole(user.uid);
-        if (role != null) {
-          await secureStorage.write(key: 'user_role', value: role);
-          await secureStorage.write(key: 'current_role', value: role);
-          print('✅ Signed-in user: ${user.email} (${user.uid}) with role $role cached locally.');
-        } else {
-          await secureStorage.delete(key: 'user_role');
-          await secureStorage.delete(key: 'current_role');
-          print('[Auth] No role found for user, cleared cached roles.');
-        }
-      }
-    });
+    // Initialize auth state listener for automatic role caching
+    AuthService.initializeAuthStateListener();
+    
+    debugPrint('[Auth] Firebase initialized and auth listener started');
   } catch (e) {
     runApp(MyApp(showFirebaseError: true, errorMessage: e.toString()));
     return;
@@ -86,7 +53,7 @@ class _MyAppState extends State<MyApp> {
     try {
       PushNotificationService.initialize(context);
     } catch (e) {
-      print('PushNotificationService init error: $e');
+      debugPrint('PushNotificationService init error: $e');
     }
 
     if (widget.showFirebaseError) {
@@ -111,10 +78,10 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<Widget> _getInitialScreen() async {
-    final isLoggedIn = await UserService.isAnyUserLoggedIn();
+    final isLoggedIn = await AuthService.isAnyUserLoggedIn();
     if (isLoggedIn) {
-      final role = await UserService.getCurrentLoggedInRole();
-      print('[Startup] Detected logged in role: $role');
+      final role = await AuthService.getCachedCurrentRole();
+      debugPrint('[Startup] Detected logged in role: $role');
       switch (role?.toLowerCase()) {
         case 'citizen':
           return const CitizenHomePage();

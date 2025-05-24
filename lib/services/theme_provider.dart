@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 import 'theme_service.dart';
-import 'user_service.dart';
+import 'auth_service.dart';
 
+/// Provides role-specific theming throughout the app
 class ThemeProvider extends InheritedWidget {
   final String currentRole;
   final ThemeData theme;
   
-  // Constructor takes a role, generates the appropriate theme 
   ThemeProvider({
     super.key,
     required this.currentRole,
-    required Widget child,
-  }) : 
-    theme = ThemeService.getRoleTheme(currentRole),
-    super(child: child);
+    required super.child,
+  }) : theme = ThemeService.getRoleTheme(currentRole);
+  
+  ThemeData get actualTheme => theme;
   
   // Get the theme provider from the context
   static ThemeProvider of(BuildContext context) {
-    final ThemeProvider? provider = context.dependOnInheritedWidgetOfExactType<ThemeProvider>();
-    assert(provider != null, 'No ThemeProvider found in context');
-    return provider!;
+    final ThemeProvider? result = context.dependOnInheritedWidgetOfExactType<ThemeProvider>();
+    assert(result != null, 'No ThemeProvider found in context');
+    return result!;
   }
   
   // Check if we need to rebuild when the provider updates
@@ -29,15 +29,16 @@ class ThemeProvider extends InheritedWidget {
   }
 }
 
+/// Dynamic theme provider that automatically detects the current user's role
 class DynamicThemeProvider extends StatefulWidget {
   final Widget child;
   final String? initialRole;
   
   const DynamicThemeProvider({
-    Key? key,
+    super.key,
     required this.child,
     this.initialRole,
-  }) : super(key: key);
+  });
   
   @override
   State<DynamicThemeProvider> createState() => _DynamicThemeProviderState();
@@ -61,18 +62,16 @@ class _DynamicThemeProviderState extends State<DynamicThemeProvider> {
         _isLoading = false;
       });
     } else {
-      // Try to get current role from user service
+      // Try to get current role from auth service
       try {
-        final loggedInRoles = await UserService.getLoggedInRoles();
-        if (loggedInRoles.isNotEmpty) {
-          if (mounted) {
-            setState(() {
-              _currentRole = loggedInRoles.first;
-              _isLoading = false;
-            });
-          }
+        final currentRole = await AuthService.getCachedCurrentRole();
+        if (currentRole != null && mounted) {
+          setState(() {
+            _currentRole = currentRole;
+            _isLoading = false;
+          });
         } else {
-          // No logged in roles
+          // No logged in role
           if (mounted) {
             setState(() {
               _currentRole = 'default';
@@ -81,7 +80,7 @@ class _DynamicThemeProviderState extends State<DynamicThemeProvider> {
           }
         }
       } catch (e) {
-        print('Error loading user roles: $e');
+        debugPrint('Error loading user role: $e');
         if (mounted) {
           setState(() {
             _currentRole = 'default';
@@ -113,6 +112,6 @@ class _DynamicThemeProviderState extends State<DynamicThemeProvider> {
 // Extension method to quickly access the current role and theme
 extension ThemeProviderExtension on BuildContext {
   ThemeProvider get themeProvider => ThemeProvider.of(this);
-  ThemeData get theme => ThemeProvider.of(this).theme;
+  ThemeData get theme => ThemeProvider.of(this).actualTheme;
   String get currentRole => ThemeProvider.of(this).currentRole;
 } 
