@@ -489,124 +489,126 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        physics: const NeverScrollableScrollPhysics(), // Prevents scrolling within card
-        child: SizedBox(
-          height: cardHeight, // Fixed height for content
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: formKeys[role],
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    "Login as $title",
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Email field
-                  TextFormField(
-                    controller: emailControllers[role],
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: "Email",
-                      prefixIcon: const Icon(Icons.email),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      isDense: true, // Reduces height of field
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  // Password field
-                  TextFormField(
-                    controller: passwordControllers[role],
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      prefixIcon: const Icon(Icons.lock),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      isDense: true, // Reduces height of field
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 5),
-                  // Remember Me checkbox
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: rememberMe[role] ?? false,
-                        onChanged: (value) {
-                          setState(() {
-                            rememberMe[role] = value ?? false;
-                          });
-                        },
-                      ),
-                      const Text("Remember Me", style: TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  // Login button
-                  SizedBox(
-                    height: 38, // Fixed height for button
-                    child: ElevatedButton(
-                      onPressed: () => login(context, role),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: color,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 0), // Reduce padding
-                      ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  // Sign up link - only show for citizen and advertiser roles
-                  if (role != 'government')
-                    TextButton(
-                      onPressed: () => navigateToSignup(context, role),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 0), // Reduce padding
-                      ),
-                      child: Text(
-                        "Don't have an account? Sign Up",
-                        style: TextStyle(color: color, fontSize: 12), // Smaller text
-                      ),
-                    ),
-                ],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: formKeys[role],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                "Login as $title",
+                style: TextStyle(
+                  color: color,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              // Email field
+              TextFormField(
+                controller: emailControllers[role],
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: "Email",
+                  prefixIcon: const Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  isDense: true, // Reduces height of field
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              // Password field
+              TextFormField(
+                controller: passwordControllers[role],
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Password",
+                  prefixIcon: const Icon(Icons.lock),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  isDense: true, // Reduces height of field
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 4),
+              // Remember Me checkbox
+              SizedBox(
+                height: 36, // Fixed height for checkbox row
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: rememberMe[role] ?? false,
+                      onChanged: (value) {
+                        setState(() {
+                          rememberMe[role] = value ?? false;
+                        });
+                      },
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    const Text("Remember Me", style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              // Login button
+              SizedBox(
+                height: 36, // Fixed height for button
+                child: ElevatedButton(
+                  onPressed: () => login(context, role),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 0), // Reduce padding
+                  ),
+                  child: const Text(
+                    "Login",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              // Sign up link - only show for citizen and advertiser roles
+              if (role != 'government')
+                SizedBox(
+                  height: 32, // Fixed height for signup button
+                  child: TextButton(
+                    onPressed: () => navigateToSignup(context, role),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 0), // Reduce padding
+                      minimumSize: const Size(0, 32), // Set minimum size
+                    ),
+                    child: Text(
+                      "Don't have an account? Sign Up",
+                      style: TextStyle(color: color, fontSize: 11), // Smaller text
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),

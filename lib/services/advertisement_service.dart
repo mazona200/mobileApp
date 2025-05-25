@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import '../models/advertisement.dart';
+import 'push_notifications.dart';
 
 class AdvertisementService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -26,6 +27,17 @@ class AdvertisementService {
         'imageUrls': imageUrls,
       });
 
+      // Send push notification to government for review
+      try {
+        await PushNotificationService.notifyNewAdvertisementForReview(
+          adId: docRef.id,
+          title: advertisement.title,
+          businessName: advertisement.businessName,
+        );
+      } catch (e) {
+        print('Failed to send advertisement review notification: $e');
+      }
+
       // Get the created advertisement
       DocumentSnapshot doc = await docRef.get();
       return Advertisement.fromFirestore(doc);
@@ -47,13 +59,38 @@ class AdvertisementService {
 
   // Get active advertisements
   Stream<List<Advertisement>> getActiveAdvertisements() {
-    DateTime now = DateTime.now();
+    // Simplify the query to avoid complex index requirements
+    // We'll filter by approval status and do date filtering client-side
     return _firestore
         .collection('advertisements')
         .where('isApproved', isEqualTo: true)
-        .where('startDate', isLessThanOrEqualTo: now)
-        .where('endDate', isGreaterThanOrEqualTo: now)
-        .orderBy('startDate', descending: true)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      try {
+        final DateTime now = DateTime.now();
+        return snapshot.docs
+            .map((doc) => Advertisement.fromFirestore(doc))
+            .where((ad) => 
+                ad.startDate.isBefore(now.add(const Duration(days: 1))) && 
+                ad.endDate.isAfter(now.subtract(const Duration(days: 1))))
+            .toList();
+      } catch (e) {
+        print('Error filtering advertisements: $e');
+        // Return all approved ads if filtering fails
+        return snapshot.docs
+            .map((doc) => Advertisement.fromFirestore(doc))
+            .toList();
+      }
+    });
+  }
+
+  // Simple method to get all approved advertisements (fallback)
+  Stream<List<Advertisement>> getApprovedAdvertisements() {
+    return _firestore
+        .collection('advertisements')
+        .where('isApproved', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => Advertisement.fromFirestore(doc)).toList();
@@ -114,10 +151,25 @@ class AdvertisementService {
   // Approve advertisement
   Future<void> approveAdvertisement(String id) async {
     try {
+      // Get advertisement details first
+      DocumentSnapshot doc = await _firestore.collection('advertisements').doc(id).get();
+      Advertisement advertisement = Advertisement.fromFirestore(doc);
+
       await _firestore.collection('advertisements').doc(id).update({
         'isApproved': true,
         'rejectionReason': null,
       });
+
+      // Send push notification to advertiser
+      try {
+        await PushNotificationService.notifyAdvertisementStatus(
+          advertiserId: advertisement.createdBy,
+          adTitle: advertisement.title,
+          isApproved: true,
+        );
+      } catch (e) {
+        print('Failed to send advertisement approval notification: $e');
+      }
     } catch (e) {
       throw Exception('Failed to approve advertisement: $e');
     }
@@ -126,10 +178,26 @@ class AdvertisementService {
   // Reject advertisement
   Future<void> rejectAdvertisement(String id, String reason) async {
     try {
+      // Get advertisement details first
+      DocumentSnapshot doc = await _firestore.collection('advertisements').doc(id).get();
+      Advertisement advertisement = Advertisement.fromFirestore(doc);
+
       await _firestore.collection('advertisements').doc(id).update({
         'isApproved': false,
         'rejectionReason': reason,
       });
+
+      // Send push notification to advertiser
+      try {
+        await PushNotificationService.notifyAdvertisementStatus(
+          advertiserId: advertisement.createdBy,
+          adTitle: advertisement.title,
+          isApproved: false,
+          rejectionReason: reason,
+        );
+      } catch (e) {
+        print('Failed to send advertisement rejection notification: $e');
+      }
     } catch (e) {
       throw Exception('Failed to reject advertisement: $e');
     }
@@ -159,4 +227,4 @@ class AdvertisementService {
       return snapshot.docs.map((doc) => Advertisement.fromFirestore(doc)).toList();
     });
   }
-} 
+}

@@ -8,6 +8,8 @@ import 'create_poll_page.dart';
 import 'inbox_page.dart';
 import 'gov_dashboard_page.dart';
 import 'manage_ads_page.dart';
+import 'review_advertisments_page.dart';
+import 'gov_reports_page.dart';
 
 class GovernmentHomePage extends StatelessWidget {
   const GovernmentHomePage({super.key});
@@ -75,10 +77,10 @@ class GovernmentHomePage extends StatelessWidget {
                         GridView.count(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 1.2,
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.9,
                           children: [
                             _buildActionCard(
                               context,
@@ -130,6 +132,26 @@ class GovernmentHomePage extends StatelessWidget {
                                 MaterialPageRoute(builder: (_) => const ManageAdsPage()),
                               ),
                             ),
+                            _buildActionCard(
+                              context,
+                              'Review Pending Ads',
+                              Icons.preview,
+                              Colors.indigo.shade600,
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const ReviewAdvertisementsPage()),
+                              ),
+                            ),
+                            _buildActionCard(
+                              context,
+                              'Reports',
+                              Icons.report,
+                              Colors.red.shade600,
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const GovReportsPage()),
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -158,29 +180,32 @@ class GovernmentHomePage extends StatelessWidget {
       child: Container(
         decoration: ThemeService.cardDecoration(),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   icon,
                   color: color,
-                  size: 32,
+                  size: 24,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 title,
                 style: ThemeService.bodyStyle.copyWith(
                   fontWeight: FontWeight.w600,
+                  fontSize: 11,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

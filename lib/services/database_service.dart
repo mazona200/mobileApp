@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'push_notifications.dart';
 
 class DatabaseService {
   // Firebase instances
@@ -70,7 +71,7 @@ class DatabaseService {
     String? authorId,
     String? authorName,
   }) async {
-    return await announcements.add({
+    final docRef = await announcements.add({
       'title': title,
       'content': content,
       'category': category,
@@ -81,6 +82,20 @@ class DatabaseService {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    // Send push notification to all citizens
+    try {
+      await PushNotificationService.notifyNewAnnouncement(
+        announcementId: docRef.id,
+        title: title,
+        category: category,
+      );
+    } catch (e) {
+      // Log error but don't fail the operation
+      print('Failed to send announcement notification: $e');
+    }
+
+    return docRef;
   }
   
   static Future<DocumentReference> addAnnouncementComment({
@@ -170,6 +185,10 @@ class DatabaseService {
     String? assignedTo,
     String? resolutionNotes,
   }) async {
+    // Get the original report to find the reporter
+    final reportDoc = await problemReports.doc(reportId).get();
+    final reportData = reportDoc.data() as Map<String, dynamic>?;
+    
     final data = {
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -184,7 +203,24 @@ class DatabaseService {
       data['resolutionDate'] = FieldValue.serverTimestamp();
     }
     
-    return await problemReports.doc(reportId).update(data);
+    await problemReports.doc(reportId).update(data);
+
+    // Send push notification to the citizen who reported the problem
+    try {
+      final userId = reportData?['userId'] as String?;
+      final title = reportData?['title'] as String? ?? 'Your report';
+      
+      if (userId != null) {
+        await PushNotificationService.notifyProblemReportUpdate(
+          userId: userId,
+          reportTitle: title,
+          newStatus: status,
+          resolutionNotes: resolutionNotes,
+        );
+      }
+    } catch (e) {
+      print('Failed to send problem report update notification: $e');
+    }
   }
   
   // Government messages methods
@@ -197,7 +233,7 @@ class DatabaseService {
     final userData = await getCurrentUserData();
     final currentUser = _auth.currentUser;
     
-    return await governmentMessages.add({
+    final docRef = await governmentMessages.add({
       'subject': subject,
       'message': message,
       'type': type,
@@ -212,6 +248,20 @@ class DatabaseService {
       'responseDate': null,
       'respondedBy': null,
     });
+
+    // Send push notification to government users
+    try {
+      await PushNotificationService.notifyNewCitizenMessage(
+        messageId: docRef.id,
+        subject: subject,
+        senderName: isAnonymous ? 'Anonymous' : (userData?['name'] ?? 'Unknown'),
+        messageType: type,
+      );
+    } catch (e) {
+      print('Failed to send citizen message notification: $e');
+    }
+
+    return docRef;
   }
   
   static Future<void> respondToMessage({
@@ -220,13 +270,32 @@ class DatabaseService {
   }) async {
     final userData = await getCurrentUserData();
     
-    return await governmentMessages.doc(messageId).update({
+    // Get the original message to find the sender
+    final messageDoc = await governmentMessages.doc(messageId).get();
+    final messageData = messageDoc.data() as Map<String, dynamic>?;
+    
+    await governmentMessages.doc(messageId).update({
       'response': response,
       'responseDate': FieldValue.serverTimestamp(),
       'respondedBy': userData?['name'] ?? _auth.currentUser?.uid,
       'status': 'Responded',
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    // Send push notification to the citizen who sent the message
+    try {
+      final userId = messageData?['userId'] as String?;
+      final subject = messageData?['subject'] as String? ?? 'Your message';
+      
+      if (userId != null) {
+        await PushNotificationService.notifyGovernmentResponse(
+          userId: userId,
+          messageSubject: subject,
+        );
+      }
+    } catch (e) {
+      print('Failed to send government response notification: $e');
+    }
   }
   
   static Stream<QuerySnapshot> getGovernmentMessagesStream() {
@@ -257,7 +326,7 @@ class DatabaseService {
       optionsMap[option] = 0;
     }
     
-    return await polls.add({
+    final docRef = await polls.add({
       'title': title,
       'description': description,
       'options': optionsMap,
@@ -269,6 +338,18 @@ class DatabaseService {
       'totalVotes': 0,
       'isActive': true,
     });
+
+    // Send push notification to all citizens
+    try {
+      await PushNotificationService.notifyNewPoll(
+        pollId: docRef.id,
+        title: title,
+      );
+    } catch (e) {
+      print('Failed to send poll notification: $e');
+    }
+
+    return docRef;
   }
   
   static Future<void> votePoll({

@@ -1,89 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ManageAdsPage extends StatefulWidget {
+class ManageAdsPage extends StatelessWidget {
   const ManageAdsPage({super.key});
-
-  @override
-  State<ManageAdsPage> createState() => _ManageAdsPageState();
-}
-
-class _ManageAdsPageState extends State<ManageAdsPage> {
-  final _formKey = GlobalKey<FormState>();
-  final titleController = TextEditingController();
-  final descriptionController = TextEditingController();
-  final imageUrlController = TextEditingController();
-
-  // Add new ad
-  Future<void> createAd() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final title = titleController.text.trim();
-    final description = descriptionController.text.trim();
-    final imageUrl = imageUrlController.text.trim();
-
-    try {
-      await FirebaseFirestore.instance.collection('ads').add({
-        'title': title,
-        'description': description,
-        'imageUrl': imageUrl,
-        'createdAt': FieldValue.serverTimestamp(),
-        'status': 'active',
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ad created successfully!')),
-      );
-
-      // Clear inputs
-      titleController.clear();
-      descriptionController.clear();
-      imageUrlController.clear();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error creating ad: $e')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Ads')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Ad Title'),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Please enter a title' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: descriptionController,
-                decoration: const InputDecoration(labelText: 'Ad Description'),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Please enter a description' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: imageUrlController,
-                decoration: const InputDecoration(labelText: 'Image URL'),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Please enter an image URL' : null,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: createAd,
-                child: const Text('Create Ad'),
-              ),
-            ],
-          ),
-        ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('advertisements').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No ads found.'));
+          }
+
+          final ads = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: ads.length,
+            itemBuilder: (context, index) {
+              final doc = ads[index];
+              final data = doc.data() as Map<String, dynamic>;
+              final title = data['title'] ?? 'No title';
+              final description = data['description'] ?? '';
+              final imageUrl = data['imageUrl'] as String? ?? '';
+              // ignore: unused_local_variable
+              final timestamp = (data['createdAt'] as Timestamp?)?.toDate();
+
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListTile(
+                  leading: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.broken_image, size: 50),
+                        )
+                      : const Icon(Icons.image_not_supported, size: 50),
+                  title: Text(title),
+                  subtitle: Text(description),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () async {
+                      await FirebaseFirestore.instance
+                          .collection('advertisements')
+                          .doc(doc.id)
+                          .delete();
+                    },
+                  ),
+                  onTap: () {
+                    // Optionally: navigate to edit screen
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Optional: add ad creation logic here
+        },
+        tooltip: 'Add New Ad',
+        child: const Icon(Icons.add),
       ),
     );
   }

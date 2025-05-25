@@ -1,5 +1,6 @@
 // ReportProblemPage.dart
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -10,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path/path.dart' as path;
 import '../components/role_protected_page.dart';
 import '../services/database_service.dart';
+import '../services/push_notifications.dart';
 
 class ReportProblemPage extends StatefulWidget {
   const ReportProblemPage({super.key});
@@ -35,6 +37,10 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
   ];
   
   bool _isSubmitting = false;
+  bool _isLoadingLocation = false;
+  String _locationError = '';
+  String _selectedAddress = '';
+  
   List<XFile> _imageFiles = [];
   final ImagePicker _picker = ImagePicker();
   
@@ -43,6 +49,10 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
   final Location _location = Location();
   Set<Marker> _markers = {};
   GoogleMapController? _mapController;
+  bool _mapControllerCompleted = false;
+  
+  // Add debouncing for map updates
+  Timer? _debounceTimer;
   
   @override
   void initState() {
@@ -54,62 +64,129 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _debounceTimer?.cancel();
     _mapController?.dispose();
     super.dispose();
   }
   
   Future<void> _getCurrentLocation() async {
-    final status = await Permission.location.request();
-    if (status.isPermanentlyDenied) {
-      if (!mounted) return;
-      _showPermissionDialog();
-      return;
-    }
-    
-    if (!status.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permission is required to report problems')),
-        );
+    setState(() {
+      _isLoadingLocation = true;
+      _locationError = '';
+    });
+
+    try {
+      final status = await Permission.location.request();
+      if (status.isPermanentlyDenied) {
+        if (!mounted) return;
+        _showPermissionDialog();
+        return;
       }
-      return;
-    }
-    
-    bool serviceEnabled = await _location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await _location.requestService();
-      if (!serviceEnabled) {
+      
+      if (!status.isGranted) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location services must be enabled to report problems')),
-          );
+          setState(() {
+            _locationError = 'Location permission is required to report problems';
+            _isLoadingLocation = false;
+          });
         }
         return;
       }
+      
+      bool serviceEnabled = await _location.serviceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await _location.requestService();
+        if (!serviceEnabled) {
+          if (mounted) {
+            setState(() {
+              _locationError = 'Location services must be enabled to report problems';
+              _isLoadingLocation = false;
+            });
+          }
+          return;
+        }
+      }
+      
+      final locationData = await _location.getLocation();
+      if (mounted && locationData.latitude != null && locationData.longitude != null) {
+        final position = LatLng(locationData.latitude!, locationData.longitude!);
+        
+        setState(() {
+          _currentLocation = locationData;
+          _selectedLocation = position;
+          _isLoadingLocation = false;
+          _selectedAddress = 'Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}';
+        });
+
+        _updateMarkerDebounced(position);
+
+        // Move camera to current location only if map is ready
+        if (_mapControllerCompleted && _mapController != null) {
+          try {
+            await _mapController!.animateCamera(
+              CameraUpdate.newCameraPosition(
+                CameraPosition(target: position, zoom: 16),
+              ),
+            );
+          } catch (e) {
+            debugPrint('Camera animation error: $e');
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _locationError = 'Error getting location: $e';
+          _isLoadingLocation = false;
+        });
+      }
     }
-    
-    final locationData = await _location.getLocation();
-    if (mounted) {
+  }
+
+  void _updateMarkerDebounced(LatLng position) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _updateMarker(position);
+      }
+    });
+  }
+
+  void _updateMarker(LatLng position) {
+    final newMarkers = {
+      Marker(
+        markerId: const MarkerId('selected_location'),
+        position: position,
+        draggable: true,
+        infoWindow: InfoWindow(
+          title: 'Problem Location',
+          snippet: 'Lat: ${position.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}',
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        onDragEnd: (newPosition) {
+          _onMarkerDragEnd(newPosition);
+        },
+      ),
+    };
+
+    // Only update if markers actually changed
+    if (_markers.isEmpty || _markers.first.position != position) {
       setState(() {
-        _currentLocation = locationData;
-        _selectedLocation = LatLng(
-          locationData.latitude ?? 0,
-          locationData.longitude ?? 0,
-        );
-        _markers.add(
-          Marker(
-            markerId: const MarkerId('selected_location'),
-            position: _selectedLocation!,
-            draggable: true,
-            onDragEnd: (newPosition) {
-              setState(() {
-                _selectedLocation = newPosition;
-              });
-            },
-          ),
-        );
+        _markers = newMarkers;
       });
     }
+  }
+
+  void _onMarkerDragEnd(LatLng newPosition) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        setState(() {
+          _selectedLocation = newPosition;
+          _selectedAddress = 'Lat: ${newPosition.latitude.toStringAsFixed(6)}, Lng: ${newPosition.longitude.toStringAsFixed(6)}';
+        });
+      }
+    });
   }
   
   void _showPermissionDialog() {
@@ -136,6 +213,36 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
         ],
       ),
     );
+  }
+
+  void _onMapTap(LatLng position) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        setState(() {
+          _selectedLocation = position;
+          _selectedAddress = 'Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}';
+        });
+        _updateMarker(position);
+      }
+    });
+  }
+
+  Future<void> _moveToCurrentLocation() async {
+    if (_currentLocation != null && _mapController != null && _mapControllerCompleted) {
+      final position = LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!);
+      try {
+        await _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: position, zoom: 16),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Camera movement error: $e');
+      }
+    } else {
+      await _getCurrentLocation();
+    }
   }
   
   Future<void> _pickImage() async {
@@ -215,7 +322,7 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
     try {
       final List<String> imageUrls = await _uploadImages();
       
-      await DatabaseService.addProblemReport(
+      final reportRef = await DatabaseService.addProblemReport(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         type: _problemType,
@@ -223,10 +330,22 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
         imageUrls: imageUrls,
       );
       
+      // Send push notification to government users
+      final userData = await DatabaseService.getCurrentUserData();
+      await PushNotificationService.notifyNewProblemReport(
+        reportId: reportRef.id,
+        title: _titleController.text.trim(),
+        reporterName: userData?['name'] ?? 'Unknown Citizen',
+        problemType: _problemType,
+      );
+      
       if (!mounted) return;
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Problem reported successfully!')),
+        const SnackBar(
+          content: Text('Problem reported successfully! Government has been notified.'),
+          backgroundColor: Colors.green,
+        ),
       );
       
       Navigator.pop(context);
@@ -245,9 +364,22 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
     return RoleProtectedPage(
       requiredRole: 'citizen',
       child: Scaffold(
-        appBar: AppBar(title: const Text('Report a Problem')),
+        appBar: AppBar(
+          title: const Text('Report a Problem'),
+          backgroundColor: Colors.red.shade600,
+          foregroundColor: Colors.white,
+        ),
         body: _isSubmitting
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Submitting your report...'),
+                  ],
+                ),
+              )
             : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Form(
@@ -255,10 +387,12 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Problem Type Dropdown
                       DropdownButtonFormField<String>(
                         decoration: const InputDecoration(
                           labelText: 'Problem Type',
                           border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.category),
                         ),
                         value: _problemType,
                         items: _problemTypes
@@ -278,12 +412,15 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                         },
                       ),
                       const SizedBox(height: 16),
+                      
+                      // Title Field
                       TextFormField(
                         controller: _titleController,
                         decoration: const InputDecoration(
                           labelText: 'Title',
                           hintText: 'Brief description of the problem',
                           border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.title),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -293,12 +430,15 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                         },
                       ),
                       const SizedBox(height: 16),
+                      
+                      // Description Field
                       TextFormField(
                         controller: _descriptionController,
                         decoration: const InputDecoration(
                           labelText: 'Description',
                           hintText: 'Provide more details about the problem',
                           border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
                         ),
                         maxLines: 4,
                         validator: (value) {
@@ -308,95 +448,137 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Problem Location',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 24),
+                      
+                      // Location Section
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, color: Colors.red),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Problem Location',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          if (!_isLoadingLocation)
+                            IconButton(
+                              onPressed: _moveToCurrentLocation,
+                              icon: const Icon(Icons.my_location),
+                              tooltip: 'Go to my location',
+                            ),
+                        ],
                       ),
+                      
                       const SizedBox(height: 8),
                       const Text(
-                        'Tap to set the exact location or drag the marker',
-                        style: TextStyle(fontSize: 12),
+                        'Tap on the map to set the exact location or drag the red marker',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: _selectedLocation == null
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Text('Waiting for location...', style: TextStyle(fontSize: 14)),
-                                    const SizedBox(height: 12),
-                                    const CircularProgressIndicator(),
-                                    const SizedBox(height: 12),
-                                    TextButton.icon(
-                                      onPressed: _getCurrentLocation,
-                                      icon: const Icon(Icons.refresh),
-                                      label: const Text('Retry'),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: GoogleMap(
-                                  initialCameraPosition: CameraPosition(target: _selectedLocation!, zoom: 15),
-                                  markers: _markers,
-                                  myLocationEnabled: true,
-                                  myLocationButtonEnabled: true,
-                                  mapToolbarEnabled: true,
-                                  compassEnabled: true,
-                                  zoomControlsEnabled: true,
-                                  onMapCreated: (controller) => _mapController = controller,
-                                  onTap: (position) => setState(() {
-                                    _selectedLocation = position;
-                                    _markers = {
-                                      Marker(
-                                        markerId: const MarkerId('selected_location'),
-                                        position: position,
-                                        draggable: true,
-                                        onDragEnd: (newPosition) {
-                                          setState(() => _selectedLocation = newPosition);
-                                        },
-                                      ),
-                                    };
-                                  }),
+                      
+                      if (_selectedAddress.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.location_on, color: Colors.blue.shade600, size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _selectedAddress,
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Map Container
+                      Container(
+                        height: 250,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: _buildMapWidget(),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Problem Photos',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Photos Section
+                      Row(
+                        children: [
+                          const Icon(Icons.photo_camera, color: Colors.green),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Problem Photos',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${_imageFiles.length}/5',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
+                      const Text(
+                        'Add photos to help us understand the problem better',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Photo Buttons
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _takePicture,
+                              onPressed: _imageFiles.length < 5 ? _takePicture : null,
                               icon: const Icon(Icons.camera_alt),
                               label: const Text('Take Photo'),
-                              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: Colors.green.shade600,
+                                foregroundColor: Colors.white,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: _pickImage,
+                              onPressed: _imageFiles.length < 5 ? _pickImage : null,
                               icon: const Icon(Icons.photo_library),
                               label: const Text('Gallery'),
-                              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: Colors.blue.shade600,
+                                foregroundColor: Colors.white,
+                              ),
                             ),
                           ),
                         ],
                       ),
+                      
                       const SizedBox(height: 16),
+                      
+                      // Selected Images
                       if (_imageFiles.isNotEmpty)
                         SizedBox(
                           height: 120,
@@ -406,10 +588,10 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                             itemBuilder: (context, index) => Stack(
                               children: [
                                 Container(
-                                  margin: const EdgeInsets.only(right: 8),
+                                  margin: const EdgeInsets.only(right: 12),
                                   width: 120,
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
+                                    border: Border.all(color: Colors.grey.shade300),
                                     borderRadius: BorderRadius.circular(8),
                                     image: DecorationImage(
                                       image: FileImage(File(_imageFiles[index].path)),
@@ -419,13 +601,20 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                                 ),
                                 Positioned(
                                   top: 4,
-                                  right: 12,
+                                  right: 16,
                                   child: GestureDetector(
                                     onTap: () => setState(() => _imageFiles.removeAt(index)),
                                     child: Container(
                                       padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                      child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -433,24 +622,154 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                             ),
                           ),
                         ),
-                      const SizedBox(height: 16),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Submit Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _submitReport,
+                          onPressed: _selectedLocation != null ? _submitReport : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundColor: Colors.red.shade600,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
+                            disabledBackgroundColor: Colors.grey.shade300,
                           ),
-                          child: const Text('Submit Report', style: TextStyle(fontSize: 16)),
+                          child: const Text(
+                            'Submit Report',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
+                      
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _buildMapWidget() {
+    if (_isLoadingLocation) {
+      return Container(
+        color: Colors.grey.shade100,
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('Getting your location...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_locationError.isNotEmpty) {
+      return Container(
+        color: Colors.red.shade50,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.location_off, size: 48, color: Colors.red.shade400),
+              const SizedBox(height: 12),
+              Text(
+                'Location Error',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  _locationError,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _getCurrentLocation,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_selectedLocation == null) {
+      return Container(
+        color: Colors.grey.shade100,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.location_searching, size: 48, color: Colors.grey.shade400),
+              const SizedBox(height: 12),
+              const Text('Waiting for location...'),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _getCurrentLocation,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GoogleMap(
+      initialCameraPosition: CameraPosition(
+        target: _selectedLocation!,
+        zoom: 16,
+      ),
+      markers: _markers,
+      myLocationEnabled: true,
+      myLocationButtonEnabled: false, // We have our own button
+      mapToolbarEnabled: false, // Disable to reduce UI overhead
+      compassEnabled: false, // Disable to reduce UI overhead
+      zoomControlsEnabled: false, // Disable to reduce UI overhead
+      rotateGesturesEnabled: false, // Disable to reduce UI overhead
+      scrollGesturesEnabled: true,
+      zoomGesturesEnabled: true,
+      tiltGesturesEnabled: false, // Disable to reduce UI overhead
+      onMapCreated: (controller) {
+        _mapController = controller;
+        _mapControllerCompleted = true;
+        // Move to location if we have one
+        if (_selectedLocation != null) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (_mapController != null && mounted) {
+              _mapController!.animateCamera(
+                CameraUpdate.newCameraPosition(
+                  CameraPosition(target: _selectedLocation!, zoom: 16),
+                ),
+              ).catchError((e) {
+                debugPrint('Initial camera animation error: $e');
+              });
+            }
+          });
+        }
+      },
+      onTap: _onMapTap,
+      mapType: MapType.normal,
     );
   }
 }

@@ -3,6 +3,8 @@ import '../components/role_protected_page.dart';
 import '../components/shared_app_bar.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
+import 'create_advertisment_page.dart';
+import 'manage_ads_page.dart';
 
 class AdvertiserHomePage extends StatelessWidget {
   const AdvertiserHomePage({super.key});
@@ -86,9 +88,9 @@ class AdvertiserHomePage extends StatelessWidget {
                               Icons.add_circle_outline,
                               Colors.green.shade600,
                               () {
-                                // TODO: Navigate to create ad page
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Create Ad feature coming soon!')),
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const CreateAdvertisementPage()),
                                 );
                               },
                             ),
@@ -98,7 +100,10 @@ class AdvertiserHomePage extends StatelessWidget {
                               Icons.campaign,
                               Colors.blue.shade600,
                               () {
-                                Navigator.pushNamed(context, '/manage_ads');
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const ManageAdsPage()),
+                                );
                               },
                             ),
                             _buildActionCard(
