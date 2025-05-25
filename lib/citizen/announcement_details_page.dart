@@ -93,8 +93,7 @@ class _AnnouncementDetailsPageState extends State<AnnouncementDetailsPage> {
     final timestamp = widget.announcement['createdAt'];
     final imageUrl = widget.announcement['imageUrl'];
     
-    return RoleProtectedPage(
-      requiredRole: "all_roles",
+    return RoleProtectedPage.forAllRoles(
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Announcement Details'),

@@ -46,3 +46,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/.gradle
+/android/app/.cxx
+/windows
+/macos
+/linux
+/ios
+android/local.properties
+android/gradlew.bat
+android/gradlew
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+android/gradle/wrapper/gradle-wrapper.jar

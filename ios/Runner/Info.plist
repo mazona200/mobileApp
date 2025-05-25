@@ -49,5 +49,15 @@
 	<array>
 		<string>tel</string>
 	</array>
+	<!-- Location permission prompts -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location to report problems accurately.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs access to location to report problems accurately.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to location to report problems accurately.</string>
+	<!-- Google Maps API Key -->
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
 </dict>
 </plist>

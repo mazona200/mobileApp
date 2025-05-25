@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:mobile_project/models/ad_model.dart';  // Adjust path to your `ad_model.dart`
+import '../models/ad_model.dart';
 import '../components/role_protected_page.dart';
 
 class AdsListPage extends StatelessWidget {
@@ -8,8 +8,7 @@ class AdsListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RoleProtectedPage(
-      requiredRole: "all_roles",
+    return RoleProtectedPage.forAllRoles(
       child: Scaffold(
         appBar: AppBar(title: const Text('Ads List')),
         body: StreamBuilder<QuerySnapshot>(

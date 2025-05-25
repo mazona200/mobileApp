@@ -1,29 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'role_selection_page.dart';
-import 'services/push_notifications.dart'; // ✅ Modular FCM service
+
+import 'common/role_selection_page.dart';
+import 'services/push_notifications.dart';
+import 'services/theme_provider.dart';
+import 'services/auth_service.dart';
+
+import 'citizen/citizen_home_page.dart';
+import 'government/gov_home_page.dart';
+import 'advertiser/advertiser_home_page.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print('[BG] Message received: ${message.notification?.title}');
+  debugPrint('[BG] FCM received: ${message.notification?.title}');
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
 
-  // ✅ Register background FCM handler
-  FirebaseMessaging.onBackgroundMessage(
-    PushNotificationService.firebaseMessagingBackgroundHandler,
-  );
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // Initialize auth state listener for automatic role caching
+    AuthService.initializeAuthStateListener();
+    
+    debugPrint('[Auth] Firebase initialized and auth listener started');
+  } catch (e) {
+    runApp(MyApp(showFirebaseError: true, errorMessage: e.toString()));
+    return;
+  }
 
   runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final bool showFirebaseError;
+  final String? errorMessage;
+
+  const MyApp({super.key, this.showFirebaseError = false, this.errorMessage});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -33,15 +50,73 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    PushNotificationService.initialize(context); // ✅ Moved FCM logic here
+    try {
+      PushNotificationService.initialize(context);
+    } catch (e) {
+      debugPrint('PushNotificationService init error: $e');
+    }
+
+    if (widget.showFirebaseError) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Firebase Initialization Error'),
+            content: Text(
+              'Error initializing Firebase:\n${widget.errorMessage ?? ''}\nSome features may not work.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      });
+    }
+  }
+
+  Future<Widget> _getInitialScreen() async {
+    final isLoggedIn = await AuthService.isAnyUserLoggedIn();
+    if (isLoggedIn) {
+      final role = await AuthService.getCachedCurrentRole();
+      debugPrint('[Startup] Detected logged in role: $role');
+      switch (role?.toLowerCase()) {
+        case 'citizen':
+          return const CitizenHomePage();
+        case 'government':
+          return const GovernmentHomePage();
+        case 'advertiser':
+          return const AdvertiserHomePage();
+      }
+    }
+    return const RoleSelectionPage();
   }
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'Gov App',
-      debugShowCheckedModeBanner: false,
-      home: RoleSelectionPage(),
+    return DynamicThemeProvider(
+      child: Builder(
+        builder: (context) => MaterialApp(
+          title: 'GovGate',
+          debugShowCheckedModeBanner: false,
+          theme: context.theme,
+          home: FutureBuilder<Widget>(
+            future: _getInitialScreen(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              return snapshot.data ?? const RoleSelectionPage();
+            },
+          ),
+          onGenerateRoute: (settings) =>
+              MaterialPageRoute(builder: (_) => const RoleSelectionPage()),
+        ),
+      ),
     );
   }
 }

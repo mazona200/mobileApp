@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'signup_page.dart';
-import 'services/theme_service.dart';
-import 'services/user_service.dart';
-import 'government/gov_home_page.dart';
-import 'citizen/citizen_home_page.dart';
-import 'advertiser/advertiser_home_page.dart';
+import 'forgot_password_page.dart';
+import '../services/theme_service.dart';
+import '../services/auth_service.dart';
+import '../government/gov_home_page.dart';
+import '../citizen/citizen_home_page.dart';
+import '../advertiser/advertiser_home_page.dart';
 
 class RoleSelectionPage extends StatefulWidget {
   const RoleSelectionPage({super.key});
@@ -40,23 +40,30 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
     'advertiser': GlobalKey<FormState>(),
   };
   
+  final Map<String, bool> rememberMe = {
+    'citizen': false,
+    'government': false,
+    'advertiser': false,
+  };
+  
   bool _isChecking = true;
   
   @override
   void initState() {
     super.initState();
-    // Check for existing logins
     _checkExistingLogins();
+    _loadSavedCredentials();
   }
   
   Future<void> _checkExistingLogins() async {
-    // Check for saved login states
-    final loggedInRoles = await UserService.getLoggedInRoles();
-    
-    if (loggedInRoles.isNotEmpty) {
-      if (mounted) {
-        // If any role is logged in, navigate to that role's home page
-        _navigateToRoleHome(context, loggedInRoles.first);
+    // Check if any user is logged in
+    if (await AuthService.isAnyUserLoggedIn()) {
+      // Get the current role
+      final currentRole = await AuthService.getCachedCurrentRole();
+      
+      if (mounted && currentRole != null) {
+        // Navigate to the appropriate home page based on role
+        _navigateToRoleHome(context, currentRole);
       }
     } else {
       // No logged in roles, stay on selection page
@@ -65,6 +72,28 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
           _isChecking = false;
         });
       }
+    }
+  }
+  
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final credentials = await AuthService.loadSavedCredentials();
+      final savedEmail = credentials['email'];
+      final savedPassword = credentials['password'];
+      final remember = credentials['remember'] == 'true';
+      
+      if (remember && savedEmail != null && savedPassword != null && mounted) {
+        setState(() {
+          // Apply saved credentials to all role forms
+          for (final role in AuthService.validRoles) {
+            emailControllers[role]?.text = savedEmail;
+            passwordControllers[role]?.text = savedPassword;
+            rememberMe[role] = true;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading saved credentials: $e');
     }
   }
   
@@ -110,7 +139,10 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => SignupPage(role: role)),
-    );
+    ).then((_) {
+      // When returning from signup, check if the user has been logged in
+      _checkExistingLogins();
+    });
   }
 
   Future<void> login(BuildContext context, String role) async {
@@ -126,25 +158,18 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
     );
     
     try {
-      // Perform Firebase authentication directly
-      final auth = FirebaseAuth.instance;
-      final userCredential = await auth.signInWithEmailAndPassword(
+      // Use the unified AuthService for login
+      await AuthService.signInWithEmailAndPassword(
         email: emailControllers[role]!.text.trim(),
         password: passwordControllers[role]!.text.trim(),
+        role: role,
       );
       
-      // Check if user role matches the requested role
-      final String? storedRole = await UserService.getUserRole(userCredential.user!.uid);
-      
-      if (storedRole != role) {
-        throw Exception('You are registered as a $storedRole, not as a $role');
-      }
-      
-      // Save login state for this role
-      await UserService.saveLoginState(
-        role, 
-        userCredential.user!.uid, 
-        userCredential.user!.email ?? emailControllers[role]!.text.trim()
+      // Save credentials if remember me is checked
+      await AuthService.saveCredentials(
+        emailControllers[role]!.text.trim(),
+        passwordControllers[role]!.text.trim(),
+        rememberMe[role] ?? false,
       );
       
       // Close the loading dialog
@@ -152,22 +177,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
       
       // Navigate to the appropriate home page based on role
       if (context.mounted) {
-        if (role.toLowerCase() == 'government') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const GovernmentHomePage()),
-          );
-        } else if (role.toLowerCase() == 'citizen') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const CitizenHomePage()),
-          );
-        } else if (role.toLowerCase() == 'advertiser') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const AdvertiserHomePage()),
-          );
-        }
+        _navigateToRoleHome(context, role);
       }
     } catch (e) {
       // Close the loading dialog
@@ -176,9 +186,12 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
       // Show error message
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().contains('Exception:') 
-            ? e.toString().split('Exception: ')[1] 
-            : 'Login failed. Please check your credentials.')),
+          SnackBar(
+            content: Text(e.toString().contains('Exception:') 
+              ? e.toString().split('Exception: ')[1] 
+              : 'Login failed. Please check your credentials.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -206,74 +219,93 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
           });
         });
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Select Role"),
-          centerTitle: true,
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    "Welcome to Gov App",
-                    style: ThemeService.headingStyle,
-                    textAlign: TextAlign.center,
+      child: WillPopScope(
+        // Prevent back navigation from this screen
+        onWillPop: () async => false,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text("Select Role"),
+            centerTitle: true,
+            automaticallyImplyLeading: false, // Remove back button
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      "Welcome to GovGate",
+                      style: ThemeService.headingStyle,
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    "Select your role to continue",
-                    style: TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
+                  const SizedBox(height: 8),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      "You want to login as ...",
+                      style: TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 30),
-                
-                // Citizen Card
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: _buildFlipCard(
-                    role: 'citizen',
-                    title: 'Citizen',
-                    description: 'Access government services, emergency numbers, and community updates',
-                    color: Colors.green.shade600,
-                    icon: Icons.person,
-                    cardHeight: screenSize.height * 0.35,
+                  const SizedBox(height: 30),
+                  
+                  // Citizen Card
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: _buildFlipCard(
+                      role: 'citizen',
+                      title: 'Citizen',
+                      description: 'Access government services, emergency numbers, and community updates',
+                      color: Colors.green.shade600,
+                      icon: Icons.person,
+                      cardHeight: screenSize.height * 0.35,
+                    ),
                   ),
-                ),
-                
-                // Government Card
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: _buildFlipCard(
-                    role: 'government',
-                    title: 'Government',
-                    description: 'Create announcements, manage polls, and respond to citizen inquiries',
-                    color: Colors.blue.shade700,
-                    icon: Icons.account_balance,
-                    cardHeight: screenSize.height * 0.35,
+                  
+                  // Government Card
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: _buildFlipCard(
+                      role: 'government',
+                      title: 'Government',
+                      description: 'Create announcements, manage polls, and respond to citizen inquiries',
+                      color: Colors.blue.shade700,
+                      icon: Icons.account_balance,
+                      cardHeight: screenSize.height * 0.35,
+                    ),
                   ),
-                ),
-                
-                // Advertiser Card
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: _buildFlipCard(
-                    role: 'advertiser',
-                    title: 'Advertiser',
-                    description: 'Create and manage advertising campaigns for government services',
-                    color: Colors.orange.shade600,
-                    icon: Icons.campaign,
-                    cardHeight: screenSize.height * 0.35,
+                  
+                  // Advertiser Card
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: _buildFlipCard(
+                      role: 'advertiser',
+                      title: 'Advertiser',
+                      description: 'Create and manage advertising campaigns for government services',
+                      color: Colors.orange.shade600,
+                      icon: Icons.campaign,
+                      cardHeight: screenSize.height * 0.35,
+                    ),
                   ),
-                ),
-              ],
+                  
+                  // Forgot Password Button
+                  const SizedBox(height: 10),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.lock_reset),
+                    label: const Text('Forgot Password?'),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),
@@ -524,7 +556,22 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 5),
+                  // Remember Me checkbox
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: rememberMe[role] ?? false,
+                        onChanged: (value) {
+                          setState(() {
+                            rememberMe[role] = value ?? false;
+                          });
+                        },
+                      ),
+                      const Text("Remember Me", style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
                   // Login button
                   SizedBox(
                     height: 38, // Fixed height for button
@@ -545,17 +592,18 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  // Sign up link
-                  TextButton(
-                    onPressed: () => navigateToSignup(context, role),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 0), // Reduce padding
+                  // Sign up link - only show for citizen and advertiser roles
+                  if (role != 'government')
+                    TextButton(
+                      onPressed: () => navigateToSignup(context, role),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 0), // Reduce padding
+                      ),
+                      child: Text(
+                        "Don't have an account? Sign Up",
+                        style: TextStyle(color: color, fontSize: 12), // Smaller text
+                      ),
                     ),
-                    child: Text(
-                      "Don't have an account? Sign Up",
-                      style: TextStyle(color: color, fontSize: 12), // Smaller text
-                    ),
-                  ),
                 ],
               ),
             ),

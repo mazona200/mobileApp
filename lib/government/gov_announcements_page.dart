@@ -10,7 +10,7 @@ class GovAnnouncementsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RoleProtectedPage(
-      requiredRole: 'government',
+      requiredRole: 'government', // Ensure this role string matches your auth roles exactly
       child: Scaffold(
         appBar: const SharedAppBar(title: "GovCircle"),
         body: Padding(
@@ -19,26 +19,53 @@ class GovAnnouncementsPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              InkWell(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CreateAnnouncementPage()),
+
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: Colors.blueAccent,
                 ),
-                child: const Text(
-                  "→ Create New Announcement",
-                  style: TextStyle(fontSize: 18, color: Colors.black),
+                icon: const Icon(Icons.create_outlined, color: Colors.white),
+                label: const Text(
+                  "Create New Announcement",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CreateAnnouncementPage()),
+                  );
+                },
               ),
+
               const SizedBox(height: 30),
-              InkWell(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AnnouncementsListPage()),
+
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: Colors.green,
                 ),
-                child: const Text(
-                  "→ Announcements",
-                  style: TextStyle(fontSize: 18, color: Colors.black),
+                icon: const Icon(Icons.list_alt_outlined, color: Colors.white),
+                label: const Text(
+                  "Announcements",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AnnouncementsListPage()),
+                  );
+                },
               ),
             ],
           ),
