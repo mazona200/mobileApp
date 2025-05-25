@@ -140,7 +140,7 @@ class _CreatePollPageState extends State<CreatePollPage> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
 
               // Button to add new option input
               TextButton.icon(

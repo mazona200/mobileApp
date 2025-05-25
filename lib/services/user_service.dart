@@ -54,7 +54,12 @@ class UserService {
   static Future<String?> getCurrentUserRole() async {
     User? user = _auth.currentUser;
     if (user != null) {
+<<<<<<< Updated upstream
       return await getUserRole(user.uid);
+=======
+      final doc = await _firestore.collection(_usersCollection).doc(user.uid).get();
+      if (doc.exists) return doc.data();
+>>>>>>> Stashed changes
     }
     return null;
   }

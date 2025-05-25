@@ -1,0 +1,2 @@
+/Volumes/Data/Dev/Untitled/mobileApp/android/app/.cxx/Debug/2e2xd6e3/x86/CMakeFiles/edit_cache.dir
+/Volumes/Data/Dev/Untitled/mobileApp/android/app/.cxx/Debug/2e2xd6e3/x86/CMakeFiles/rebuild_cache.dir

@@ -3,6 +3,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'gov_announcements_page.dart';
 import 'gov_dashboard_page.dart';
 import '../common/polls_page.dart';
+<<<<<<< Updated upstream
+=======
+import 'create_poll_page.dart';
+import 'inbox_page.dart';
+import 'manage_ads_page.dart'; // ✅ Import Manage Ads Page
+import 'review_advertisements_page.dart'; // ✅ Import Review Advertisements Page
+import '../services/user_service.dart';
+import '../common/role_selection_page.dart';
+import '../components/shared_app_bar.dart';
+>>>>>>> Stashed changes
 import '../components/role_protected_page.dart';
 import '../components/shared_app_bar.dart';
 
@@ -39,9 +49,141 @@ class GovernmentHomePage extends StatelessWidget {
     return RoleProtectedPage(
       requiredRole: 'government',
       child: Scaffold(
+<<<<<<< Updated upstream
         appBar: const SharedAppBar(
           title: "GovCircle",
           isHomePage: true,
+=======
+        appBar: const SharedAppBar(title: "Government Dashboard", isHomePage: true),
+        body: FutureBuilder<Map<String, dynamic>?>(
+          future: UserService.getCurrentUserData(),
+          builder: (context, snapshot) {
+            String userName = 'Administrator';
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasData && snapshot.data != null) {
+              userName = snapshot.data!['name'] ?? 'Administrator';
+            }
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Welcome, $userName', style: ThemeService.headingStyle),
+                        const SizedBox(height: 8),
+                        const Text('Government Administration Panel', style: TextStyle(fontSize: 16)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('Administration Tools', style: ThemeService.subheadingStyle),
+                  ),
+                  const SizedBox(height: 10),
+                  GridView.count(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.1,
+                    children: [
+                      buildDashboardCard(
+                        context: context,
+                        icon: Icons.home,
+                        title: "Home",
+                        color: Colors.blue,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const GovDashboardPage()),
+                        ),
+                      ),
+                      buildDashboardCard(
+                        context: context,
+                        icon: Icons.announcement_outlined,
+                        title: "New Announcement",
+                        color: Colors.green,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const GovAnnouncementsPage()),
+                        ),
+                      ),
+                      buildDashboardCard(
+                        context: context,
+                        icon: Icons.how_to_vote_outlined,
+                        title: "Polls",
+                        color: Colors.orange,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PollsPage()),
+                        ),
+                      ),
+                      buildDashboardCard(
+                        context: context,
+                        icon: Icons.add_chart_outlined,
+                        title: "Create Poll",
+                        color: Colors.purple,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CreatePollPage()),
+                        ),
+                      ),
+                      buildDashboardCard(
+                        context: context,
+                        icon: Icons.chat_bubble_outline,
+                        title: "Inbox",
+                        color: Colors.teal,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const InboxPage()),
+                        ),
+                      ),
+                      buildDashboardCard(
+                        context: context,
+                        icon: Icons.campaign_outlined,
+                        title: "Manage Ads",
+                        color: Colors.red,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ManageAdsPage()),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ReviewAdvertisementsPage()),
+                        );
+                      },
+                      child: const Text("Review Advertisements"),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+>>>>>>> Stashed changes
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),

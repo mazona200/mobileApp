@@ -23,12 +23,14 @@ class _ManageAdsPageState extends State<ManageAdsPage> {
     final imageUrl = imageUrlController.text.trim();
 
     try {
-      await FirebaseFirestore.instance.collection('ads').add({
+      await FirebaseFirestore.instance.collection('advertisements').add({
         'title': title,
         'description': description,
-        'imageUrl': imageUrl,
+        'imageUrls': [imageUrl], // Updated to store image URLs as a list
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'active',
+        'isApproved': false, // Default to not approved
+        'createdBy': 'advertiserId', // Replace with actual advertiser ID
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -46,43 +48,139 @@ class _ManageAdsPageState extends State<ManageAdsPage> {
     }
   }
 
+  // Fetch active ads for the advertiser
+  Stream<QuerySnapshot> fetchActiveAds(String advertiserId) {
+    return FirebaseFirestore.instance
+        .collection('advertisements')
+        .where('createdBy', isEqualTo: advertiserId) // Use actual advertiser ID
+        .where('isApproved', isEqualTo: true)
+        .where('status', isEqualTo: 'active')
+        .snapshots();
+  }
+
+  // Fetch pending ads for the advertiser
+  Stream<QuerySnapshot> fetchPendingAds(String advertiserId) {
+    return FirebaseFirestore.instance
+        .collection('advertisements')
+        .where('createdBy', isEqualTo: advertiserId) // Use actual advertiser ID
+        .where('isApproved', isEqualTo: false)
+        .snapshots();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Manage Ads')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Ad Title'),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Please enter a title' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: descriptionController,
-                decoration: const InputDecoration(labelText: 'Ad Description'),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Please enter a description' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: imageUrlController,
-                decoration: const InputDecoration(labelText: 'Image URL'),
-                validator: (value) =>
-                    (value == null || value.trim().isEmpty) ? 'Please enter an image URL' : null,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: createAd,
-                child: const Text('Create Ad'),
-              ),
+    final String advertiserId = 'advertiserId'; // Replace with actual logic to fetch advertiser ID
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Advertisements'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Active Ads'),
+              Tab(text: 'Pending Ads'),
             ],
           ),
+        ),
+        body: TabBarView(
+          children: [
+            // Active Ads Tab
+            StreamBuilder<QuerySnapshot>(
+              stream: fetchActiveAds(advertiserId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final ads = snapshot.data?.docs ?? [];
+
+                if (ads.isEmpty) {
+                  return const Center(child: Text('No active advertisements'));
+                }
+
+                return ListView.builder(
+                  itemCount: ads.length,
+                  itemBuilder: (context, index) {
+                    final ad = ads[index].data() as Map<String, dynamic>;
+                    final imageUrls = ad['imageUrls'] as List<dynamic>? ?? [];
+                    return Card(
+                      margin: const EdgeInsets.all(10),
+                      child: ListTile(
+                        title: Text(
+                          ad['title'] ?? 'No Title',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        subtitle: Text(ad['description'] ?? 'No Description'),
+                        trailing: imageUrls.isNotEmpty
+                            ? Image.network(
+                                imageUrls.first,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.broken_image),
+                              )
+                            : const Icon(Icons.image_not_supported),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+
+            // Pending Ads Tab
+            StreamBuilder<QuerySnapshot>(
+              stream: fetchPendingAds(advertiserId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                final ads = snapshot.data?.docs ?? [];
+
+                if (ads.isEmpty) {
+                  return const Center(child: Text('No pending advertisements'));
+                }
+
+                return ListView.builder(
+                  itemCount: ads.length,
+                  itemBuilder: (context, index) {
+                    final ad = ads[index].data() as Map<String, dynamic>;
+                    final imageUrls = ad['imageUrls'] as List<dynamic>? ?? [];
+                    return Card(
+                      margin: const EdgeInsets.all(10),
+                      child: ListTile(
+                        title: Text(ad['title'] ?? 'No Title'),
+                        subtitle: Text(ad['description'] ?? 'No Description'),
+                        trailing: imageUrls.isNotEmpty
+                            ? Image.network(
+                                imageUrls.first,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.broken_image),
+                              )
+                            : const Icon(Icons.image_not_supported),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
