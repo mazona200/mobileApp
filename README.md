@@ -110,7 +110,7 @@
 
 | Polls | Contact Government | Emergency Numbers |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/citizen-polls.png" width="220" alt="Polls"/> | <img src="docs/screenshots/.citizen-contactpng" width="220" alt="Contact"/> | <img src="docs/screenshots/citizen-emergency.png" width="220" alt="Emergency"/> |
+| <img src="docs/screenshots/citizen-polls.png" width="220" alt="Polls"/> | <img src="docs/screenshots/citizen-contact.png" width="220" alt="Contact"/> | <img src="docs/screenshots/citizen-emergency.png" width="220" alt="Emergency"/> |
 
 </div>
 
