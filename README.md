@@ -86,10 +86,6 @@
 
 ---
 
-## 📸 Screenshots
-
-> Screenshots are stored in `docs/screenshots/`. Drop your captured images there using the filenames below.
-
 ### 🚪 Onboarding & Auth
 
 <div align="center">
