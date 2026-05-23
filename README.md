@@ -132,38 +132,6 @@
 
 ---
 
-<details>
-<summary><strong>📋 Screenshots checklist — capture these from the running app</strong></summary>
-
-Take each screenshot at the resolution of your test device. PNG, portrait orientation. Save under `docs/screenshots/` using the exact names below:
-
-**Onboarding (3)**
-- [ ] `role-selection.png` — the welcome screen with three role cards
-- [ ] `login.png` — login form (back of a flipped card or full login page)
-- [ ] `signup.png` — full signup form filled with sample data
-
-**Citizen (6)**
-- [ ] `citizen-home.png` — dashboard with quick action grid
-- [ ] `citizen-announcements.png` — list of announcements
-- [ ] `citizen-report-problem.png` — report screen showing map + problem-type picker
-- [ ] `citizen-polls.png` — list of active polls
-- [ ] `citizen-contact.png` — compose message to government
-- [ ] `citizen-emergency.png` — emergency numbers screen
-
-**Government (3)**
-- [ ] `gov-home.png` — administrator dashboard
-- [ ] `gov-inbox.png` — inbox view with citizen messages
-- [ ] `gov-review-ads.png` — pending ads review screen
-
-**Advertiser (3)**
-- [ ] `advertiser-home.png` — advertiser dashboard
-- [ ] `advertiser-create.png` — create-ad form
-- [ ] `advertiser-manage.png` — list of submitted ads with status
-
-</details>
-
----
-
 ## 🛠️ Tech Stack
 
 <div align="center">
