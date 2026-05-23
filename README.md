@@ -201,19 +201,19 @@ Take each screenshot at the resolution of your test device. PNG, portrait orient
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                         GovGate App                          │
-│                                                              │
+│                         GovGate App                         │
+│                                                             │
 │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐     │
 │  │   Citizen    │   │  Government  │   │  Advertiser  │     │
 │  │    Pages     │   │    Pages     │   │    Pages     │     │
 │  └──────┬───────┘   └──────┬───────┘   └──────┬───────┘     │
 │         └──────────────────┼──────────────────┘             │
-│                   RoleProtectedPage                          │
-│                            │                                 │
+│                   RoleProtectedPage                         │
+│                            │                                │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │                    Services Layer                     │   │
-│  │  AuthService · DatabaseService · AdvertisementService │   │
-│  │  PushNotificationService · ThemeService · ErrorHandler│   │
+│  │                    Services Layer                    │   │
+│  │  AuthService · DatabaseService ·AdvertisementService │   │
+│  │  PushNotificationService · ThemeService· ErrorHandler│   │
 │  └──────────────────────────┬───────────────────────────┘   │
 └─────────────────────────────┼───────────────────────────────┘
                               │
@@ -340,6 +340,7 @@ lib/
 
 ---
 ---
+
 
 ## 📄 License
 
