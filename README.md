@@ -83,8 +83,8 @@
 | Read public announcements | Publish announcements | Submit advertisements |
 | Vote in active polls | Create & close polls | Track approval status |
 | Send messages to government | Inbox & reply to citizens | Manage active campaigns |
-| Report local problems (📷 + 📍) | Triage problem reports | View campaign analytics *(soon)* |
-| Browse approved local ads | Approve / reject ads | Account settings *(soon)* |
+| Report local problems (📷 + 📍) | Triage problem reports | |
+| Browse approved local ads | Approve / reject ads | |
 | Quick-dial emergency numbers | Maintain emergency contacts | |
 | Live notifications | Community dashboard | |
 
