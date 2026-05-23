@@ -4,7 +4,13 @@
 
 # GovGate
 
-### 🏛️ A unified civic engagement platform connecting citizens, government, and advertisers — built with Flutter & Firebase.
+## 🏛️ A unified civic engagement platform connecting citizens, government, and advertisers
+
+### Special thanks to My colleages : 
+ [Mazen Yasser](https://github.com/mazona200) & Salma Walid for setting Up this project foundations , setting up firebase authentication , firestore , implementing Government role backend and testing .
+
+[Mohamed Tamer](https://github.com/MooTamer) for implementing the Advertiser role backend and testing .
+
 
 <br/>
 
@@ -23,7 +29,7 @@
 
 **GovGate** is a mobile-first civic engagement platform that brings together three audiences under one roof — **citizens**, **government administrators**, and **local advertisers**. It is designed to make civic participation effortless: report a pothole on your street, vote on a city poll, hear back from your local council, or promote a community business — all from a single app.
 
-> 🎓 Built as a university project for Software Mobile Course , GovGate showcases a production-grade Flutter architecture, role-based access control, and a Firebase-powered realtime backend.
+> 🎓 **Built as a university project for Software Mobile Course , GovGate showcases a production-grade Flutter architecture, role-based access control, and a Firebase-powered realtime backend.**
 
 ---
 
