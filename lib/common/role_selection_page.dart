@@ -219,9 +219,9 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
           });
         });
       },
-      child: WillPopScope(
+      child: PopScope(
         // Prevent back navigation from this screen
-        onWillPop: () async => false,
+        canPop: false,
         child: Scaffold(
           appBar: AppBar(
             title: const Text("Select Role"),

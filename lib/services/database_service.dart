@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'push_notifications.dart';
 
 class DatabaseService {
@@ -17,6 +18,7 @@ class DatabaseService {
   static final CollectionReference governmentMessages = _firestore.collection('government_messages');
   static final CollectionReference polls = _firestore.collection('polls');
   static final CollectionReference emergencyContacts = _firestore.collection('emergency_contacts');
+  static final CollectionReference advertisements = _firestore.collection('advertisements');
   
   // User methods
   static Future<void> createOrUpdateUser({
@@ -92,7 +94,7 @@ class DatabaseService {
       );
     } catch (e) {
       // Log error but don't fail the operation
-      print('Failed to send announcement notification: $e');
+      debugPrint('Failed to send announcement notification: $e');
     }
 
     return docRef;
@@ -219,7 +221,7 @@ class DatabaseService {
         );
       }
     } catch (e) {
-      print('Failed to send problem report update notification: $e');
+      debugPrint('Failed to send problem report update notification: $e');
     }
   }
   
@@ -258,7 +260,7 @@ class DatabaseService {
         messageType: type,
       );
     } catch (e) {
-      print('Failed to send citizen message notification: $e');
+      debugPrint('Failed to send citizen message notification: $e');
     }
 
     return docRef;
@@ -294,7 +296,7 @@ class DatabaseService {
         );
       }
     } catch (e) {
-      print('Failed to send government response notification: $e');
+      debugPrint('Failed to send government response notification: $e');
     }
   }
   
@@ -346,7 +348,7 @@ class DatabaseService {
         title: title,
       );
     } catch (e) {
-      print('Failed to send poll notification: $e');
+      debugPrint('Failed to send poll notification: $e');
     }
 
     return docRef;

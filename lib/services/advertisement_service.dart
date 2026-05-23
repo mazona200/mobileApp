@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import '../models/advertisement.dart';
 import 'push_notifications.dart';
@@ -35,7 +36,7 @@ class AdvertisementService {
           businessName: advertisement.businessName,
         );
       } catch (e) {
-        print('Failed to send advertisement review notification: $e');
+        debugPrint('Failed to send advertisement review notification: $e');
       }
 
       // Get the created advertisement
@@ -76,7 +77,7 @@ class AdvertisementService {
                 ad.endDate.isAfter(now.subtract(const Duration(days: 1))))
             .toList();
       } catch (e) {
-        print('Error filtering advertisements: $e');
+        debugPrint('Error filtering advertisements: $e');
         // Return all approved ads if filtering fails
         return snapshot.docs
             .map((doc) => Advertisement.fromFirestore(doc))
@@ -168,7 +169,7 @@ class AdvertisementService {
           isApproved: true,
         );
       } catch (e) {
-        print('Failed to send advertisement approval notification: $e');
+        debugPrint('Failed to send advertisement approval notification: $e');
       }
     } catch (e) {
       throw Exception('Failed to approve advertisement: $e');
@@ -196,7 +197,7 @@ class AdvertisementService {
           rejectionReason: reason,
         );
       } catch (e) {
-        print('Failed to send advertisement rejection notification: $e');
+        debugPrint('Failed to send advertisement rejection notification: $e');
       }
     } catch (e) {
       throw Exception('Failed to reject advertisement: $e');

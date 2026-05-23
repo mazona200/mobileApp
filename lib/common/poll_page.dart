@@ -52,7 +52,7 @@ class _PollPageState extends State<PollPage> {
       await FirebaseAuth.instance.currentUser?.reload();
       currentUser = FirebaseAuth.instance.currentUser;
 
-      print('🔄 Fetching poll, current user: ${currentUser?.email} (${currentUser?.uid})');
+      debugPrint('🔄 Fetching poll, current user: ${currentUser?.email} (${currentUser?.uid})');
 
       final doc = await FirebaseFirestore.instance
           .collection('polls')

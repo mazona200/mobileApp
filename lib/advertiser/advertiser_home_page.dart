@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../components/coming_soon_page.dart';
 import '../components/role_protected_page.dart';
 import '../components/shared_app_bar.dart';
 import '../services/auth_service.dart';
@@ -111,24 +112,32 @@ class AdvertiserHomePage extends StatelessWidget {
                               'Analytics',
                               Icons.analytics,
                               Colors.purple.shade600,
-                              () {
-                                // TODO: Navigate to analytics page
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Analytics feature coming soon!')),
-                                );
-                              },
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ComingSoonPage(
+                                    featureName: 'Analytics',
+                                    icon: Icons.analytics,
+                                    description: 'Track your ad performance, views, and engagement metrics.\nThis feature will be available in a future update.',
+                                  ),
+                                ),
+                              ),
                             ),
                             _buildActionCard(
                               context,
                               'Settings',
                               Icons.settings,
                               Colors.grey.shade600,
-                              () {
-                                // TODO: Navigate to settings page
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Settings feature coming soon!')),
-                                );
-                              },
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ComingSoonPage(
+                                    featureName: 'Settings',
+                                    icon: Icons.settings,
+                                    description: 'Manage your account preferences, notifications, and billing.\nThis feature will be available in a future update.',
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),

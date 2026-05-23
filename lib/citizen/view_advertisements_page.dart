@@ -25,7 +25,7 @@ class ViewAdvertisementsPage extends StatelessWidget {
             }
 
             if (snapshot.hasError) {
-              print('Error loading advertisements: ${snapshot.error}');
+              debugPrint('Error loading advertisements: ${snapshot.error}');
               // Try fallback method with approved advertisements
               return StreamBuilder<List<Advertisement>>(
                 stream: AdvertisementService().getApprovedAdvertisements(),

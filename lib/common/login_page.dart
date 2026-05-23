@@ -9,10 +9,8 @@ import '../utils/string_extensions.dart';
 
 class LoginPage extends StatefulWidget {
   final String role;
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
 
-  LoginPage({super.key, required this.role});
+  const LoginPage({super.key, required this.role});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -20,6 +18,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool isLoading = false;
   bool rememberMe = false;
@@ -30,17 +30,22 @@ class _LoginPageState extends State<LoginPage> {
     _loadSavedCredentials();
   }
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadSavedCredentials() async {
     try {
       final credentials = await AuthService.loadSavedCredentials();
       final savedEmail = credentials['email'];
-      final savedPassword = credentials['password'];
       final savedRemember = credentials['remember'] == 'true';
 
       if (savedRemember && mounted) {
         setState(() {
-          widget.emailController.text = savedEmail ?? '';
-          widget.passwordController.text = savedPassword ?? '';
+          _emailController.text = savedEmail ?? '';
           rememberMe = true;
         });
       }
@@ -49,29 +54,27 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> login({bool auto = false}) async {
-    if (!auto && !_formKey.currentState!.validate()) return;
+  Future<void> login() async {
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
 
     try {
-      // Use the unified AuthService for login
       await AuthService.signInWithEmailAndPassword(
-        email: widget.emailController.text.trim(),
-        password: widget.passwordController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
         role: widget.role,
       );
 
-      // Save or clear stored credentials based on rememberMe
       await AuthService.saveCredentials(
-        widget.emailController.text.trim(),
-        widget.passwordController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
         rememberMe,
       );
 
       if (!mounted) return;
 
-      debugPrint('🔐 Login successful: ${widget.emailController.text} with role ${widget.role}');
+      debugPrint('Login successful: ${_emailController.text} as ${widget.role}');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login successful as ${widget.role}!')),
@@ -125,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               children: [
                 TextFormField(
-                  controller: widget.emailController,
+                  controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: "Email"),
                   validator: (value) {
@@ -137,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
-                  controller: widget.passwordController,
+                  controller: _passwordController,
                   obscureText: true,
                   decoration: const InputDecoration(labelText: "Password"),
                   validator: (value) {
@@ -164,7 +167,7 @@ class _LoginPageState extends State<LoginPage> {
                 isLoading
                     ? const CircularProgressIndicator()
                     : ElevatedButton(
-                        onPressed: () => login(),
+                        onPressed: login,
                         child: const Text("Login"),
                       ),
                 const SizedBox(height: 20),

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Mobile Project</string>
+	<string>GovGate</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>mobile_project</string>
+	<string>GovGate</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -49,14 +49,19 @@
 	<array>
 		<string>tel</string>
 	</array>
-	<!-- Location permission prompts -->
+	<!-- Permission descriptions -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs access to location to report problems accurately.</string>
+	<string>GovGate needs your location to accurately report problems in your area.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>This app needs access to location to report problems accurately.</string>
+	<string>GovGate needs your location to accurately report problems in your area.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app needs access to location to report problems accurately.</string>
-	<!-- Google Maps API Key -->
+	<string>GovGate needs your location to accurately report problems in your area.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>GovGate needs camera access to attach photos to problem reports and advertisements.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>GovGate needs photo library access to attach images to problem reports and advertisements.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>GovGate sends notifications for government announcements, poll updates, and message replies.</string>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
 </dict>

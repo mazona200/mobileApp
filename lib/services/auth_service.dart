@@ -206,28 +206,27 @@ class AuthService {
     return currentRole == requiredRole;
   }
   
-  /// Save login credentials for remember me functionality
+  /// Save email for remember me functionality (password is never persisted)
   static Future<void> saveCredentials(String email, String password, bool remember) async {
     if (remember) {
       await _secureStorage.write(key: _savedEmailKey, value: email);
-      await _secureStorage.write(key: _savedPasswordKey, value: password);
       await _secureStorage.write(key: _rememberMeKey, value: 'true');
     } else {
       await _secureStorage.delete(key: _savedEmailKey);
-      await _secureStorage.delete(key: _savedPasswordKey);
       await _secureStorage.write(key: _rememberMeKey, value: 'false');
     }
+    // Always clear any previously stored password
+    await _secureStorage.delete(key: _savedPasswordKey);
   }
-  
-  /// Load saved credentials
+
+  /// Load saved email (password is never returned)
   static Future<Map<String, String?>> loadSavedCredentials() async {
     final savedEmail = await _secureStorage.read(key: _savedEmailKey);
-    final savedPassword = await _secureStorage.read(key: _savedPasswordKey);
     final rememberMe = (await _secureStorage.read(key: _rememberMeKey)) == 'true';
-    
+
     return {
       'email': rememberMe ? savedEmail : null,
-      'password': rememberMe ? savedPassword : null,
+      'password': null, // password is never stored
       'remember': rememberMe.toString(),
     };
   }

@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.mobile_project"
+    namespace = "com.govgate.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973" // Required for Firebase compatibility
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.mobile_project"
+        applicationId = "com.govgate.app"
         minSdk = 23 // Increased from minimum for compatibility
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -29,6 +29,10 @@ android {
 
         // Firebase Messaging auto-init enabled
         manifestPlaceholders["firebase_messaging_auto_init_enabled"] = "true"
+
+        ndk {
+            abiFilters += setOf("x86") // emulator only; remove/expand before release
+        }
     }
 
     buildTypes {

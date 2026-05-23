@@ -73,15 +73,15 @@ class CitizenHomePage extends StatelessWidget {
                   if (uid != null)
                     StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
-                          .collection('messages')
-                          .where('senderUid', isEqualTo: uid)
-                          .where('hasReply', isEqualTo: true)
+                          .collection('government_messages')
+                          .where('userId', isEqualTo: uid)
+                          .where('status', isEqualTo: 'Responded')
                           .snapshots(),
                       builder: (context, snapshot) {
                         if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
                           final last = snapshot.data!.docs.first;
-                          final lastReply = last['lastRepliedAt'] != null
-                              ? (last['lastRepliedAt'] as Timestamp).toDate().toLocal().toString()
+                          final lastReply = last['responseDate'] != null
+                              ? (last['responseDate'] as Timestamp).toDate().toLocal().toString()
                               : 'Recently';
 
                           return Padding(

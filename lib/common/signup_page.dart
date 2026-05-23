@@ -38,7 +38,7 @@ class _SignupPageState extends State<SignupPage> {
     try {
       return FirebaseAuth.instance;
     } catch (e) {
-      print('Firebase Auth not available: $e');
+      debugPrint('Firebase Auth not available: $e');
       return null;
     }
   }

@@ -1,4 +1,4 @@
-package com.example.mobile_project
+package com.govgate.app
 
 import io.flutter.embedding.android.FlutterActivity
 
