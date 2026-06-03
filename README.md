@@ -29,7 +29,7 @@
 
 **GovGate** is a mobile-first civic engagement platform that brings together three audiences under one roof — **citizens**, **government administrators**, and **local advertisers**. It is designed to make civic participation effortless: report a pothole on your street, vote on a city poll, hear back from your local council, or promote a community business — all from a single app.
 
-> 🎓 **Built as a university project for Software Mobile Course , GovGate showcases a production-grade Flutter architecture, role-based access control, and a Firebase-powered realtime backend.**
+> 🎓 **Built as a university project for Software Mobile Course (Fullstack), GovGate showcases a production-grade Flutter architecture, role-based access control, and a Firebase-powered realtime backend.**
 
 ---
 
@@ -98,7 +98,7 @@
 
 | Role Selection | Login | Signup |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/role-selection.png" width="220" alt="Role Selection"/> | <img src="docs/screenshots/login.png" width="220" alt="Login"/> | <img src="docs/screenshots/signup.png" width="220" alt="Signup"/> |
+| <img src="screenshots/role-selection.png" width="220" alt="Role Selection"/> | <img src="screenshots/login.png" width="220" alt="Login"/> | <img src="screenshots/signup.png" width="220" alt="Signup"/> |
 
 </div>
 
@@ -108,11 +108,11 @@
 
 | Home | Announcements | Report a Problem |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/citizen-home.png" width="220" alt="Citizen Home"/> | <img src="docs/screenshots/citizen-announcements.png" width="220" alt="Announcements"/> | <img src="docs/screenshots/citizen-report-problem.png" width="220" alt="Report Problem"/> |
+| <img src="screenshots/citizen-home.png" width="220" alt="Citizen Home"/> | <img src="screenshots/citizen-announcements.png" width="220" alt="Announcements"/> | <img src="screenshots/citizen-report-problem.png" width="220" alt="Report Problem"/> |
 
 | Polls | Contact Government | Emergency Numbers |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/citizen-polls.png" width="220" alt="Polls"/> | <img src="docs/screenshots/citizen-contact.png" width="220" alt="Contact"/> | <img src="docs/screenshots/citizen-emergency.png" width="220" alt="Emergency"/> |
+| <img src="screenshots/citizen-polls.png" width="220" alt="Polls"/> | <img src="screenshots/citizen-contact.png" width="220" alt="Contact"/> | <img src="screenshots/citizen-emergency.png" width="220" alt="Emergency"/> |
 
 </div>
 
@@ -122,7 +122,7 @@
 
 | Dashboard | Inbox | Review Ads |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/gov-home.png" width="220" alt="Government Home"/> | <img src="docs/screenshots/gov-inbox.png" width="220" alt="Inbox"/> | <img src="docs/screenshots/gov-review-ads.png" width="220" alt="Review Ads"/> |
+| <img src="screenshots/gov-home.png" width="220" alt="Government Home"/> | <img src="screenshots/gov-inbox.png" width="220" alt="Inbox"/> | <img src="screenshots/gov-review-ads.png" width="220" alt="Review Ads"/> |
 
 </div>
 
@@ -132,7 +132,7 @@
 
 | Dashboard | Create Ad | Manage Ads |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/advertiser-home.png" width="220" alt="Advertiser Home"/> | <img src="docs/screenshots/advertiser-create.png" width="220" alt="Create Ad"/> | <img src="docs/screenshots/advertiser-manage.png" width="220" alt="Manage Ads"/> |
+| <img src="screenshots/advertiser-home.png" width="220" alt="Advertiser Home"/> | <img src="screenshots/advertiser-create.png" width="220" alt="Create Ad"/> | <img src="screenshots/advertiser-manage.png" width="220" alt="Manage Ads"/> |
 
 </div>
 
@@ -207,43 +207,6 @@
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Flutter `3.7.2` or newer ([install guide](https://docs.flutter.dev/get-started/install))
-- Android Studio / Xcode for emulators
-- A [Firebase project](https://console.firebase.google.com)
-
-### Setup
-
-```bash
-# 1. Clone and install dependencies
-git clone <your-repo-url>
-cd mobileApp
-flutter pub get
-
-# 2. Configure Firebase (see below)
-#    Drop google-services.json into android/app/
-#    Drop GoogleService-Info.plist into ios/Runner/
-
-# 3. Run on a connected device or emulator
-flutter run
-```
-
-### Firebase configuration
-
-| Step | What to do |
-|---|---|
-| 1️⃣ | Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com) |
-| 2️⃣ | Add an Android app with package name `com.govgate.app` and download `google-services.json` |
-| 3️⃣ | Enable **Authentication → Email/Password** |
-| 4️⃣ | Create a **Firestore** database in test mode, then deploy the rules from [`firestore.rules`](firestore.rules) |
-| 5️⃣ | Enable **Storage** (default rules are fine for development) |
-| 6️⃣ | (Optional) Enable **Cloud Messaging** for push notifications |
-
----
-
 ## 🗂️ Project Structure
 
 ```
@@ -309,12 +272,6 @@ lib/
 ```
 
 ---
----
-
-
-## 📄 License
-
-This project is built for academic purposes as part of a university coursework. Feel free to learn from the code; please don't ship it as your own.
 
 <div align="center">
 
