@@ -6,9 +6,13 @@ import 'package:flutter/material.dart';
 /// Unified authentication service that handles all auth operations
 /// Replaces the scattered auth logic across multiple files
 class AuthService {
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  static late final FirebaseAuth _auth = FirebaseAuth.instance;
+  static late final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    webOptions: WebOptions(
+      dbName: 'GovGateAuthStorage',
+    ),
+  );
   
   // Storage keys
   static const String _userRoleKey = 'user_role';

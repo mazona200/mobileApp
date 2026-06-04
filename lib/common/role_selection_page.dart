@@ -189,7 +189,8 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
           SnackBar(
             content: Text(e.toString().contains('Exception:') 
               ? e.toString().split('Exception: ')[1] 
-              : 'Login failed. Please check your credentials.'),
+//              : 'Login failed. Please check your credentials.'),
+              : e.toString()),
             backgroundColor: Colors.red,
           ),
         );

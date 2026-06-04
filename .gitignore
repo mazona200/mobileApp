@@ -55,3 +55,4 @@ android/gradlew
 android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 android/gradle/wrapper/gradle-wrapper.jar
 android/app/OLDgoogle-services.json
+/.claude
